@@ -53,6 +53,8 @@ import {
   buildStrengthenedImagePrompt,
   sceneHasImagePromptSource,
 } from "@/lib/utils/strengthen-image-prompt";
+import { runWithConcurrency } from "@/lib/utils/run-with-concurrency";
+import type { ImageQuality } from "@/lib/openai/image-generation";
 import {
   DEFAULT_CHARACTER_STUDIO,
   type CharacterStudio,
@@ -70,13 +72,15 @@ type LoadingPhase =
   | "prompts"
   | "master"
   | "images";
-type RegenerateMode = "normal" | "with-instruction" | "image-only";
+type RegenerateMode = "normal" | "with-instruction" | "image-only" | "high-quality";
 
 type SceneFieldEdit = {
   sceneNumber: string;
   field: SceneEditableFieldKey;
   draft: string;
 };
+
+const IMAGE_GENERATION_CONCURRENCY = 2;
 
 const SCENE_EDITABLE_FIELDS: SceneEditableFieldKey[] = [
   "narration",
@@ -105,10 +109,12 @@ function toSceneWithImage(
     visualDirectorPrompt: null,
     visualDirectorWarning: null,
     visualDirectorError: null,
+    finalImagePrompt: null,
     characterBiblePrompt: null,
     additionalInstruction: "",
     imageUrl: null,
     imageError: null,
+    imageGenerationSeconds: null,
     imageLoading: false,
     variantsLoading: false,
     variants: null,
@@ -458,27 +464,34 @@ export default function Home() {
 
     const previousImageUrl = scene.imageUrl;
     const isImageOnly = mode === "image-only";
+    const isHighQuality = mode === "high-quality";
 
     setSceneRegenerating(sceneNumber, mode);
     updateScene(sceneNumber, {
       imageLoading: true,
       imageError: null,
-      imageUrl: isImageOnly ? previousImageUrl : null,
+      imageUrl: isImageOnly || isHighQuality ? previousImageUrl : null,
     });
 
-    const sceneForGeneration = isImageOnly
-      ? scene
-      : await prepareSceneForImageGeneration(scene);
+    const sceneForGeneration =
+      isImageOnly || isHighQuality
+        ? scene
+        : await prepareSceneForImageGeneration(scene);
 
-    const result = await generateImageForScene(
-      sceneForGeneration,
-      mode === "with-instruction"
-    );
+    const result = await generateImageForScene(sceneForGeneration, {
+      withAdditionalInstruction: mode === "with-instruction",
+      quality: isHighQuality ? "high" : "medium",
+      useStoredFinalPrompt:
+        (isImageOnly || isHighQuality) &&
+        Boolean(sceneForGeneration.finalImagePrompt?.trim()),
+    });
 
     updateScene(sceneNumber, {
       imageUrl: result.imageUrl ?? previousImageUrl,
       imageError: result.imageError,
       imageLoading: false,
+      finalImagePrompt: result.finalImagePrompt ?? scene.finalImagePrompt,
+      imageGenerationSeconds: result.imageGenerationSeconds,
       adoptedVariantIndex: result.imageUrl ? null : scene.adoptedVariantIndex,
     });
     setSceneRegenerating(sceneNumber, null);
@@ -486,6 +499,10 @@ export default function Home() {
 
   async function handleGenerateImageOnly(sceneNumber: string) {
     await regenerateSceneImage(sceneNumber, "image-only");
+  }
+
+  async function handleGenerateHighQuality(sceneNumber: string) {
+    await regenerateSceneImage(sceneNumber, "high-quality");
   }
 
   async function handleRegenerateImage(sceneNumber: string) {
@@ -602,7 +619,7 @@ export default function Home() {
     return data.cinematicDirectorPrompt as string;
   }
 
-  async function generateCameraDirection(
+  async function generateCameraVisualDirection(
     scenesToProcess: SceneWithImage[],
     currentEventName: string,
     cinematicDirectorPrompt: string
@@ -610,7 +627,7 @@ export default function Home() {
     setLoadingPhase("camera");
     setProgress({ current: 0, total: 1 });
 
-    const response = await fetch("/api/generate-camera-direction", {
+    const response = await fetch("/api/generate-camera-visual-direction", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -631,133 +648,61 @@ export default function Home() {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.error || "Camera Directorの設計に失敗しました。");
+      throw new Error(
+        data.error || "Camera + Visual Directorの設計に失敗しました。"
+      );
     }
 
-    type CameraSceneResult = CameraDirector & { cameraDirectorPrompt: string };
+    type CameraVisualSceneResult = {
+      sceneNumber: string;
+      cameraDirector: CameraDirector;
+      cameraDirectorPrompt: string;
+      visualDirectorScenePrompt: string;
+    };
 
-    const cameraMap = new Map<string, CameraSceneResult>(
-      (data.scenes as CameraSceneResult[]).map((item) => [
+    const apiWarnings = Array.isArray(data.warnings)
+      ? (data.warnings as string[])
+      : [];
+
+    const resultMap = new Map<string, CameraVisualSceneResult>(
+      (data.scenes as CameraVisualSceneResult[]).map((item) => [
         item.sceneNumber,
         item,
       ])
     );
 
     const updatedScenes = scenesToProcess.map((scene) => {
-      const camera = cameraMap.get(scene.sceneNumber);
+      const result = resultMap.get(scene.sceneNumber);
+      if (!result) {
+        return {
+          ...scene,
+          cinematicDirectorPrompt,
+          cinematicStyle,
+          visualDirectorError: "Camera + Visual Directorの結果が見つかりませんでした。",
+        };
+      }
+
+      const sceneWarning = apiWarnings.find((warning) =>
+        warning.includes(scene.sceneNumber)
+      );
+
       return {
         ...scene,
         cinematicDirectorPrompt,
-        cameraDirector: camera
-          ? {
-              sceneNumber: camera.sceneNumber,
-              shotType: camera.shotType,
-              cameraHeight: camera.cameraHeight,
-              lens: camera.lens,
-              distance: camera.distance,
-              framing: camera.framing,
-              composition: camera.composition,
-              focus: camera.focus,
-              depthOfField: camera.depthOfField,
-              lightingDirection: camera.lightingDirection,
-              perspective: camera.perspective,
-              cutRationale: camera.cutRationale,
-            }
-          : null,
-        cameraDirectorPrompt: camera?.cameraDirectorPrompt ?? null,
+        cinematicStyle,
+        cameraDirector: result.cameraDirector,
+        cameraDirectorPrompt: result.cameraDirectorPrompt,
+        visualDirectorScenePrompt: result.visualDirectorScenePrompt,
+        characterBiblePrompt:
+          data.characterBiblePrompt ?? scene.characterBiblePrompt,
+        visualDirectorWarning: sceneWarning ?? null,
+        visualDirectorError: null,
+        visualDirectorPrompt: null,
       };
     });
 
     setScenes(updatedScenes);
     setProgress({ current: 1, total: 1 });
-    return updatedScenes;
-  }
-
-  async function generateVisualDirection(
-    scenesToProcess: SceneWithImage[],
-    currentEventName: string,
-    cinematicDirectorPrompt: string
-  ): Promise<SceneWithImage[]> {
-    setLoadingPhase("prompts");
-    const total = scenesToProcess.length;
-    setProgress({ current: 0, total });
-
-    let updatedScenes: SceneWithImage[] = scenesToProcess.map((scene) => ({
-      ...scene,
-      cinematicDirectorPrompt,
-      cinematicStyle,
-      visualDirectorScenePrompt: null as string | null,
-      visualDirectorPrompt: null as string | null,
-      visualDirectorWarning: null as string | null,
-      visualDirectorError: null as string | null,
-    }));
-
-    for (let i = 0; i < updatedScenes.length; i++) {
-      const scene = updatedScenes[i];
-
-      try {
-        const response = await fetch("/api/generate-visual-direction", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            eventName: currentEventName,
-            characterBible: getEffectiveCharacterBible(scene),
-            cinematicDirectorPrompt,
-            scenes: [
-              {
-                sceneNumber: scene.sceneNumber,
-                narration: scene.narration,
-                imageDescription: scene.imageDescription,
-                sceneAge: scene.sceneAge,
-                charactersInScene: scene.charactersInScene,
-                cameraDirectorPrompt: scene.cameraDirectorPrompt ?? "",
-              },
-            ],
-          }),
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          updatedScenes[i] = {
-            ...updatedScenes[i],
-            visualDirectorError:
-              data.error || "Visual Director AIの設計に失敗しました。",
-            visualDirectorWarning: null,
-          };
-        } else {
-          const result = data.scenes[0] as
-            | { visualDirectorScenePrompt: string }
-            | undefined;
-          const apiWarnings = Array.isArray(data.warnings)
-            ? (data.warnings as string[])
-            : [];
-
-          updatedScenes[i] = {
-            ...updatedScenes[i],
-            visualDirectorScenePrompt: result?.visualDirectorScenePrompt ?? null,
-            characterBiblePrompt:
-              data.characterBiblePrompt ?? updatedScenes[i].characterBiblePrompt,
-            visualDirectorWarning: apiWarnings[0] ?? null,
-            visualDirectorError: result?.visualDirectorScenePrompt
-              ? null
-              : "Visual Director Promptが見つかりませんでした。",
-          };
-        }
-      } catch (err) {
-        updatedScenes[i] = {
-          ...updatedScenes[i],
-          visualDirectorError:
-            err instanceof Error
-              ? err.message
-              : "Visual Director AIの設計に失敗しました。",
-        };
-      }
-
-      setScenes([...updatedScenes]);
-      setProgress({ current: i + 1, total });
-    }
-
     return updatedScenes;
   }
 
@@ -1001,13 +946,76 @@ export default function Home() {
 
   async function generateImageForScene(
     scene: SceneWithImage,
-    withAdditionalInstruction = false
-  ): Promise<{ imageUrl: string | null; imageError: string | null }> {
+    options: {
+      withAdditionalInstruction?: boolean;
+      quality?: ImageQuality;
+      useStoredFinalPrompt?: boolean;
+    } = {}
+  ): Promise<{
+    imageUrl: string | null;
+    imageError: string | null;
+    finalImagePrompt: string | null;
+    imageGenerationSeconds: number | null;
+  }> {
+    const {
+      withAdditionalInstruction = false,
+      quality = "medium",
+      useStoredFinalPrompt = false,
+    } = options;
+
+    if (useStoredFinalPrompt && scene.finalImagePrompt?.trim()) {
+      const startMs = performance.now();
+      try {
+        const response = await fetch("/api/generate-image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            prompt: scene.finalImagePrompt,
+            useFinalPrompt: true,
+            quality,
+          }),
+        });
+        const data = await response.json();
+        const elapsedSeconds = (performance.now() - startMs) / 1000;
+        console.log(
+          `Scene ${scene.sceneNumber} image generated in ${elapsedSeconds.toFixed(1)}s`
+        );
+
+        if (!response.ok) {
+          return {
+            imageUrl: null,
+            imageError: data.error || "画像の生成に失敗しました。",
+            finalImagePrompt: scene.finalImagePrompt,
+            imageGenerationSeconds: null,
+          };
+        }
+
+        return {
+          imageUrl: data.imageUrl,
+          imageError: null,
+          finalImagePrompt: data.finalImagePrompt ?? scene.finalImagePrompt,
+          imageGenerationSeconds: Number(elapsedSeconds.toFixed(1)),
+        };
+      } catch (err) {
+        return {
+          imageUrl: null,
+          imageError:
+            err instanceof Error ? err.message : "画像の生成に失敗しました。",
+          finalImagePrompt: scene.finalImagePrompt,
+          imageGenerationSeconds: null,
+        };
+      }
+    }
+
     const resolved = resolveSceneImagePrompt(scene);
     if (!resolved.prompt) {
       return {
         imageUrl: null,
-        imageError: resolved.error || "Visual Director Promptが未生成のため、画像を生成できません。",
+        imageError:
+          resolved.error ||
+          "Visual Director Promptが未生成のため、画像を生成できません。",
+        finalImagePrompt: null,
+        imageGenerationSeconds: null,
       };
     }
 
@@ -1016,6 +1024,8 @@ export default function Home() {
         visualDirectorWarning: resolved.warning,
       });
     }
+
+    const startMs = performance.now();
 
     try {
       let prompt = resolved.prompt;
@@ -1027,6 +1037,8 @@ export default function Home() {
           return {
             imageUrl: null,
             imageError: "追加指示を入力してください。",
+            finalImagePrompt: null,
+            imageGenerationSeconds: null,
           };
         }
 
@@ -1047,6 +1059,8 @@ export default function Home() {
             imageUrl: null,
             imageError:
               integrateData.error || "プロンプトの統合に失敗しました。",
+            finalImagePrompt: null,
+            imageGenerationSeconds: null,
           };
         }
 
@@ -1059,24 +1073,38 @@ export default function Home() {
         body: JSON.stringify({
           prompt,
           characterBiblePrompt: characterPrompt,
+          quality,
         }),
       });
 
       const data = await response.json();
+      const elapsedSeconds = (performance.now() - startMs) / 1000;
+      console.log(
+        `Scene ${scene.sceneNumber} image generated in ${elapsedSeconds.toFixed(1)}s`
+      );
 
       if (!response.ok) {
         return {
           imageUrl: null,
           imageError: data.error || "画像の生成に失敗しました。",
+          finalImagePrompt: null,
+          imageGenerationSeconds: null,
         };
       }
 
-      return { imageUrl: data.imageUrl, imageError: null };
+      return {
+        imageUrl: data.imageUrl,
+        imageError: null,
+        finalImagePrompt: data.finalImagePrompt ?? null,
+        imageGenerationSeconds: Number(elapsedSeconds.toFixed(1)),
+      };
     } catch (err) {
       return {
         imageUrl: null,
         imageError:
           err instanceof Error ? err.message : "画像の生成に失敗しました。",
+        finalImagePrompt: null,
+        imageGenerationSeconds: null,
       };
     }
   }
@@ -1085,25 +1113,38 @@ export default function Home() {
     setLoadingPhase("images");
     setProgress({ current: 0, total: scenesToProcess.length });
 
-    for (let i = 0; i < scenesToProcess.length; i++) {
-      const scene = scenesToProcess[i];
+    let completed = 0;
 
+    scenesToProcess.forEach((scene) => {
       updateScene(scene.sceneNumber, {
         imageLoading: true,
         imageError: null,
       });
+    });
 
-      const result = await generateImageForScene(scene);
+    await runWithConcurrency(
+      scenesToProcess,
+      IMAGE_GENERATION_CONCURRENCY,
+      async (scene) => {
+        const result = await generateImageForScene(scene, {
+          quality: "medium",
+        });
 
-      updateScene(scene.sceneNumber, {
-        imageUrl: result.imageUrl ?? scene.imageUrl,
-        imageError: result.imageError,
-        imageLoading: false,
-        adoptedVariantIndex: result.imageUrl ? null : scene.adoptedVariantIndex,
-      });
+        updateScene(scene.sceneNumber, {
+          imageUrl: result.imageUrl ?? scene.imageUrl,
+          imageError: result.imageError,
+          imageLoading: false,
+          finalImagePrompt: result.finalImagePrompt ?? scene.finalImagePrompt,
+          imageGenerationSeconds: result.imageGenerationSeconds,
+          adoptedVariantIndex: result.imageUrl
+            ? null
+            : scene.adoptedVariantIndex,
+        });
 
-      setProgress({ current: i + 1, total: scenesToProcess.length });
-    }
+        completed += 1;
+        setProgress({ current: completed, total: scenesToProcess.length });
+      }
+    );
 
     setLoadingPhase("idle");
   }
@@ -1290,20 +1331,14 @@ export default function Home() {
         cinematicDirectorPrompt,
       }));
 
-      const scenesWithCamera = await generateCameraDirection(
+      const scenesWithCameraVisual = await generateCameraVisualDirection(
         scenesWithCinematic,
         trimmed,
         cinematicDirectorPrompt
       );
 
-      const scenesWithPrompts = await generateVisualDirection(
-        scenesWithCamera,
-        trimmed,
-        cinematicDirectorPrompt
-      );
-
       const scenesWithMaster = await generateMasterDirection(
-        scenesWithPrompts,
+        scenesWithCameraVisual,
         trimmed,
         cinematicDirectorPrompt
       );
@@ -1637,9 +1672,18 @@ export default function Home() {
                   const loadingText =
                     regenerateMode === "with-instruction"
                       ? "追加指示付きで再生成中..."
-                      : regenerateMode === "image-only" || isRegenerating
-                        ? "画像を再生成中..."
-                        : "画像を生成中...";
+                      : regenerateMode === "high-quality"
+                        ? "高品質で再生成中..."
+                        : regenerateMode === "image-only" || isRegenerating
+                          ? "画像を再生成中..."
+                          : "画像を生成中...";
+                  const showHighQualityButton =
+                    Boolean(scene.imageUrl) &&
+                    sceneHasImagePromptSource(scene) &&
+                    !scene.imageLoading &&
+                    !isRegenerating &&
+                    !scene.variantsLoading &&
+                    loadingPhase === "idle";
                   const showImageGenerateButton =
                     canAttemptImageGeneration &&
                     !scene.imageUrl &&
@@ -1764,11 +1808,19 @@ export default function Home() {
                         </div>
                       )}
                       {!scene.imageLoading && scene.imageUrl && (
-                        <img
-                          src={scene.imageUrl}
-                          alt={scene.imageDescription}
-                          className={styles.sceneImage}
-                        />
+                        <>
+                          <img
+                            src={scene.imageUrl}
+                            alt={scene.imageDescription}
+                            className={styles.sceneImage}
+                          />
+                          {scene.imageGenerationSeconds != null && (
+                            <p className={styles.imageGenerationLog}>
+                              Scene {scene.sceneNumber} image generated in{" "}
+                              {scene.imageGenerationSeconds.toFixed(1)}s
+                            </p>
+                          )}
+                        </>
                       )}
                       {!scene.imageLoading &&
                         !scene.imageUrl &&
@@ -1909,6 +1961,19 @@ export default function Home() {
                         画像をダウンロード
                       </button>
                     </div>
+
+                    {showHighQualityButton && (
+                      <button
+                        type="button"
+                        className={styles.cardButtonHighQuality}
+                        onClick={() =>
+                          handleGenerateHighQuality(scene.sceneNumber)
+                        }
+                        disabled={timelineDisabled}
+                      >
+                        高品質で再生成
+                      </button>
+                    )}
 
                     <button
                       type="button"

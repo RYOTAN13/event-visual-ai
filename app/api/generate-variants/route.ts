@@ -1,10 +1,6 @@
 import { NextResponse } from "next/server";
-import {
-  getOpenAIClient,
-  IMAGE_MODEL,
-  TEXT_MODEL,
-  type OpenAIClient,
-} from "@/lib/openai/client";
+import { getOpenAIClient, TEXT_MODEL } from "@/lib/openai/client";
+import { generateSceneImage } from "@/lib/openai/image-generation";
 import { VARIANT_PROMPT_SYSTEM } from "@/lib/prompts/variant-prompt";
 import { swapVisualDirectorSection } from "@/lib/visual-director";
 
@@ -23,8 +19,8 @@ type VariantPromptsResult = {
   variants: VariantPrompt[];
 };
 
-async function generateImage(
-  openai: OpenAIClient,
+async function generateVariantImage(
+  openai: NonNullable<ReturnType<typeof getOpenAIClient>>,
   variantCinematographyPrompt: string,
   fullVisualDirectorPrompt: string
 ): Promise<string> {
@@ -33,19 +29,7 @@ async function generateImage(
     variantCinematographyPrompt
   );
 
-  const response = await openai.images.generate({
-    model: IMAGE_MODEL,
-    prompt: finalPrompt,
-    size: "1024x1024",
-    quality: "high",
-  });
-
-  const b64 = response.data?.[0]?.b64_json;
-  if (!b64) {
-    throw new Error("画像データの取得に失敗しました。");
-  }
-
-  return `data:image/png;base64,${b64}`;
+  return generateSceneImage(openai, finalPrompt, "high");
 }
 
 export { maxDuration, dynamic } from "@/lib/vercel/api-route-config";
@@ -147,7 +131,7 @@ export async function POST(request: Request) {
 
     const imageResults = await Promise.allSettled(
       variants.map((variant) =>
-        generateImage(openai, variant.prompt, visualDirectorPrompt)
+        generateVariantImage(openai, variant.prompt, visualDirectorPrompt)
       )
     );
 

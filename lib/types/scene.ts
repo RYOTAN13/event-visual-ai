@@ -43,10 +43,14 @@ export type SceneWithImage = Scene & {
   visualDirectorPrompt: string | null;
   visualDirectorWarning: string | null;
   visualDirectorError: string | null;
+  /** 画像生成APIへ送った最終プロンプト（Character結合済み） */
+  finalImagePrompt: string | null;
   characterBiblePrompt: string | null;
   additionalInstruction: string;
   imageUrl: string | null;
   imageError: string | null;
+  /** 直近の画像生成にかかった秒数 */
+  imageGenerationSeconds: number | null;
   imageLoading: boolean;
   variantsLoading: boolean;
   variants: SceneVariant[] | null;

@@ -1,8 +1,16 @@
 import { NextResponse } from "next/server";
-import { getOpenAIClient, IMAGE_MODEL } from "@/lib/openai/client";
+import { getOpenAIClient } from "@/lib/openai/client";
+import {
+  generateSceneImage,
+  type ImageQuality,
+} from "@/lib/openai/image-generation";
 import { buildFinalImagePrompt } from "@/lib/visual-director";
 
 export { maxDuration, dynamic } from "@/lib/vercel/api-route-config";
+
+function parseImageQuality(value: unknown): ImageQuality {
+  return value === "high" ? "high" : "medium";
+}
 
 export async function POST(request: Request) {
   try {
@@ -21,6 +29,8 @@ export async function POST(request: Request) {
       typeof body.characterBiblePrompt === "string"
         ? body.characterBiblePrompt.trim()
         : "";
+    const useFinalPrompt = body.useFinalPrompt === true;
+    const quality = parseImageQuality(body.quality);
 
     if (!prompt) {
       return NextResponse.json(
@@ -29,27 +39,17 @@ export async function POST(request: Request) {
       );
     }
 
-    const finalPrompt = characterBiblePrompt
-      ? buildFinalImagePrompt(characterBiblePrompt, prompt)
-      : prompt;
+    const finalPrompt =
+      useFinalPrompt || !characterBiblePrompt
+        ? prompt
+        : buildFinalImagePrompt(characterBiblePrompt, prompt);
 
-    const response = await openai.images.generate({
-      model: IMAGE_MODEL,
-      prompt: finalPrompt,
-      size: "1024x1024",
-      quality: "high",
-    });
-
-    const b64 = response.data?.[0]?.b64_json;
-    if (!b64) {
-      return NextResponse.json(
-        { error: "画像データの取得に失敗しました。" },
-        { status: 502 }
-      );
-    }
+    const imageUrl = await generateSceneImage(openai, finalPrompt, quality);
 
     return NextResponse.json({
-      imageUrl: `data:image/png;base64,${b64}`,
+      imageUrl,
+      finalImagePrompt: finalPrompt,
+      quality,
     });
   } catch (error) {
     const message =
