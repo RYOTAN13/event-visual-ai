@@ -41,6 +41,7 @@ export type SceneWithImage = Scene & {
   cameraDirectorPrompt: string | null;
   visualDirectorScenePrompt: string | null;
   visualDirectorPrompt: string | null;
+  visualDirectorWarning: string | null;
   visualDirectorError: string | null;
   characterBiblePrompt: string | null;
   additionalInstruction: string;

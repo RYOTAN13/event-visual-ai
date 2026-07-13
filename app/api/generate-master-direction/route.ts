@@ -9,7 +9,10 @@ import { buildCharacterBibleBasePrompt, isCharacterBible } from "@/lib/character
 import { buildSceneArraySchema } from "@/lib/utils/scene-count";
 import {
   buildSceneImagePrompt,
-  isValidVisualDirectorScenePrompt,
+  isVisualDirectorScenePromptEmpty,
+  isShortVisualDirectorScenePrompt,
+  strengthenVisualDirectorScenePrompt,
+  getShortPromptWarning,
 } from "@/lib/visual-director";
 import type { Scene } from "@/lib/types";
 
@@ -206,6 +209,8 @@ export async function POST(request: Request) {
       typedScenes.map((scene) => [scene.sceneNumber, scene])
     );
 
+    const warnings: string[] = [];
+
     const results = data.scenes.map((scene) => {
       const inputScene = sceneMap.get(scene.sceneNumber);
       const charactersInScene = inputScene?.charactersInScene ?? [
@@ -216,10 +221,34 @@ export async function POST(request: Request) {
       const sceneContent = inputScene
         ? `${inputScene.narration}\n${inputScene.imageDescription}`
         : "";
+      const rawScenePrompt = scene.visualDirectorScenePrompt.trim();
 
-      if (!isValidVisualDirectorScenePrompt(scene.visualDirectorScenePrompt)) {
-        throw new Error(
-          `${scene.sceneNumber} の補正後プロンプトが1200文字未満です。`
+      if (isVisualDirectorScenePromptEmpty(rawScenePrompt)) {
+        throw new Error(`${scene.sceneNumber} のVisual Director Promptが空です。`);
+      }
+
+      const strengthenedScenePrompt = isShortVisualDirectorScenePrompt(
+        rawScenePrompt
+      )
+        ? strengthenVisualDirectorScenePrompt({
+            sceneNumber: scene.sceneNumber,
+            visualDirectorScenePrompt: rawScenePrompt,
+            narration: inputScene?.narration ?? "",
+            imageDescription: inputScene?.imageDescription ?? "",
+            visualPurpose: inputScene?.visualPurpose,
+            emotion: inputScene?.emotion,
+            sceneAge,
+            charactersInScene,
+            cameraDirectorPrompt,
+            masterDirectorPrompt,
+            cinematicDirectorPrompt,
+            characterBible,
+          })
+        : rawScenePrompt;
+
+      if (isShortVisualDirectorScenePrompt(rawScenePrompt)) {
+        warnings.push(
+          getShortPromptWarning(scene.sceneNumber, rawScenePrompt.length)
         );
       }
 
@@ -227,7 +256,7 @@ export async function POST(request: Request) {
         masterDirectorPrompt,
         cinematicDirectorPrompt,
         cameraDirectorPrompt,
-        scene.visualDirectorScenePrompt,
+        strengthenedScenePrompt,
         characterBible,
         sceneAge,
         charactersInScene,
@@ -236,7 +265,7 @@ export async function POST(request: Request) {
 
       return {
         sceneNumber: scene.sceneNumber,
-        visualDirectorScenePrompt: scene.visualDirectorScenePrompt,
+        visualDirectorScenePrompt: rawScenePrompt,
         visualDirectorPrompt,
         checklist: scene.checklist,
       };
@@ -246,12 +275,14 @@ export async function POST(request: Request) {
       masterDirectorPrompt,
       characterBiblePrompt,
       scenes: results,
+      warnings,
     });
   } catch (error) {
     const message =
       error instanceof Error
         ? error.message
         : "Master Directorのレビューに失敗しました。";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const status = message.includes("空です") ? 502 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

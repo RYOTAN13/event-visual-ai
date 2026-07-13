@@ -1,4 +1,3 @@
-import { MIN_VISUAL_DIRECTOR_PROMPT_LENGTH } from "@/lib/prompts/visual-prompt";
 import type { SceneDirectionMeta } from "@/lib/types";
 
 export type { SceneDirectionMeta } from "@/lib/types";
@@ -10,9 +9,17 @@ export {
   swapVisualDirectorSection,
   VISUAL_DIRECTOR_AI_SYSTEM_PROMPT,
 } from "@/lib/prompts/visual-prompt";
+export {
+  buildStrengthenedImagePrompt,
+  getShortPromptWarning,
+  isShortVisualDirectorScenePrompt,
+  isVisualDirectorScenePromptEmpty,
+  sceneHasImagePromptSource,
+  strengthenVisualDirectorScenePrompt,
+} from "@/lib/utils/strengthen-image-prompt";
 
 export function isValidVisualDirectorScenePrompt(prompt: string): boolean {
-  return prompt.length >= MIN_VISUAL_DIRECTOR_PROMPT_LENGTH;
+  return prompt.trim().length > 0;
 }
 
 /** @deprecated Use isValidVisualDirectorScenePrompt */

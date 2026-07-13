@@ -50,6 +50,10 @@ import {
   resolveEffectiveCharacterBible,
 } from "@/lib/character-studio";
 import {
+  buildStrengthenedImagePrompt,
+  sceneHasImagePromptSource,
+} from "@/lib/utils/strengthen-image-prompt";
+import {
   DEFAULT_CHARACTER_STUDIO,
   type CharacterStudio,
 } from "@/lib/types/character-studio";
@@ -99,6 +103,7 @@ function toSceneWithImage(
     cameraDirectorPrompt: null,
     visualDirectorScenePrompt: null,
     visualDirectorPrompt: null,
+    visualDirectorWarning: null,
     visualDirectorError: null,
     characterBiblePrompt: null,
     additionalInstruction: "",
@@ -243,6 +248,94 @@ export default function Home() {
       scene.characterBible,
       scene.characterBiblePrompt
     );
+  }
+
+  function resolveSceneImagePrompt(scene: SceneWithImage): {
+    prompt: string | null;
+    warning: string | null;
+    error: string | null;
+  } {
+    if (scene.visualDirectorPrompt?.trim()) {
+      return {
+        prompt: scene.visualDirectorPrompt.trim(),
+        warning: scene.visualDirectorWarning,
+        error: null,
+      };
+    }
+
+    const scenePrompt = scene.visualDirectorScenePrompt?.trim();
+    if (!scenePrompt) {
+      return {
+        prompt: null,
+        warning: null,
+        error:
+          scene.visualDirectorError ||
+          "Visual Director Promptが未生成のため、画像を生成できません。",
+      };
+    }
+
+    const characterBible = getEffectiveCharacterBible(scene);
+    if (!characterBible) {
+      return {
+        prompt: null,
+        warning: null,
+        error: "Character Bibleが未設定のため、画像を生成できません。",
+      };
+    }
+
+    try {
+      const { prompt, warning } = buildStrengthenedImagePrompt({
+        sceneNumber: scene.sceneNumber,
+        visualDirectorScenePrompt: scenePrompt,
+        narration: scene.narration,
+        imageDescription: scene.imageDescription,
+        visualPurpose: scene.visualPurpose,
+        emotion: scene.emotion,
+        sceneAge: scene.sceneAge,
+        charactersInScene: scene.charactersInScene,
+        cameraDirector: scene.cameraDirector,
+        cameraDirectorPrompt: scene.cameraDirectorPrompt,
+        masterDirectorPrompt: scene.masterDirectorPrompt,
+        cinematicDirectorPrompt: scene.cinematicDirectorPrompt,
+        characterBible,
+        characterStudioPrompt: getCharacterPromptForScene(scene),
+      });
+
+      if (!prompt.trim()) {
+        return {
+          prompt: null,
+          warning: null,
+          error: "Visual Director Promptが空のため、画像を生成できません。",
+        };
+      }
+
+      return { prompt, warning, error: null };
+    } catch {
+      const fallbackPrompt = [
+        scenePrompt,
+        scene.narration,
+        scene.imageDescription,
+        scene.cinematicDirectorPrompt,
+        scene.cameraDirectorPrompt,
+        scene.masterDirectorPrompt,
+      ]
+        .filter((part) => part?.trim())
+        .join("\n\n");
+
+      if (!fallbackPrompt.trim()) {
+        return {
+          prompt: null,
+          warning: null,
+          error: "画像プロンプトの組み立てに失敗しました。",
+        };
+      }
+
+      return {
+        prompt: fallbackPrompt,
+        warning: scene.visualDirectorWarning,
+        error: null,
+      };
+    }
   }
 
   function updateProtagonist(
@@ -595,6 +688,7 @@ export default function Home() {
       cinematicStyle,
       visualDirectorScenePrompt: null as string | null,
       visualDirectorPrompt: null as string | null,
+      visualDirectorWarning: null as string | null,
       visualDirectorError: null as string | null,
     }));
 
@@ -629,17 +723,22 @@ export default function Home() {
             ...updatedScenes[i],
             visualDirectorError:
               data.error || "Visual Director AIの設計に失敗しました。",
+            visualDirectorWarning: null,
           };
         } else {
           const result = data.scenes[0] as
             | { visualDirectorScenePrompt: string }
             | undefined;
+          const apiWarnings = Array.isArray(data.warnings)
+            ? (data.warnings as string[])
+            : [];
 
           updatedScenes[i] = {
             ...updatedScenes[i],
             visualDirectorScenePrompt: result?.visualDirectorScenePrompt ?? null,
             characterBiblePrompt:
               data.characterBiblePrompt ?? updatedScenes[i].characterBiblePrompt,
+            visualDirectorWarning: apiWarnings[0] ?? null,
             visualDirectorError: result?.visualDirectorScenePrompt
               ? null
               : "Visual Director Promptが見つかりませんでした。",
@@ -701,15 +800,60 @@ export default function Home() {
 
     if (!response.ok) {
       const message = data.error || "Master Directorのレビューに失敗しました。";
-      const failedScenes = scenesToProcess.map((scene) => ({
-        ...scene,
-        visualDirectorError: scene.visualDirectorScenePrompt
-          ? message
-          : scene.visualDirectorError,
-      }));
+      const failedScenes = scenesToProcess.map((scene) => {
+        if (!scene.visualDirectorScenePrompt?.trim()) {
+          return {
+            ...scene,
+            visualDirectorError: scene.visualDirectorError,
+          };
+        }
+
+        const characterBible = getEffectiveCharacterBible(scene);
+        if (!characterBible) {
+          return {
+            ...scene,
+            visualDirectorError: message,
+          };
+        }
+
+        const { prompt, warning } = buildStrengthenedImagePrompt({
+          sceneNumber: scene.sceneNumber,
+          visualDirectorScenePrompt: scene.visualDirectorScenePrompt ?? "",
+          narration: scene.narration,
+          imageDescription: scene.imageDescription,
+          visualPurpose: scene.visualPurpose,
+          emotion: scene.emotion,
+          sceneAge: scene.sceneAge,
+          charactersInScene: scene.charactersInScene,
+          cameraDirector: scene.cameraDirector,
+          cameraDirectorPrompt: scene.cameraDirectorPrompt,
+          masterDirectorPrompt: scene.masterDirectorPrompt,
+          cinematicDirectorPrompt: scene.cinematicDirectorPrompt,
+          characterBible,
+          characterStudioPrompt: getCharacterPromptForScene(scene),
+        });
+
+        if (!prompt.trim()) {
+          return {
+            ...scene,
+            visualDirectorError: message,
+          };
+        }
+
+        return {
+          ...scene,
+          visualDirectorPrompt: prompt,
+          visualDirectorWarning: warning,
+          visualDirectorError: null,
+        };
+      });
       setScenes(failedScenes);
       return failedScenes;
     }
+
+    const apiWarnings = Array.isArray(data.warnings)
+      ? (data.warnings as string[])
+      : [];
 
     const masterMap = new Map<
       string,
@@ -730,6 +874,10 @@ export default function Home() {
         return scene;
       }
 
+      const sceneWarning = apiWarnings.find((warning) =>
+        warning.includes(scene.sceneNumber)
+      );
+
       return {
         ...scene,
         masterDirectorPrompt: data.masterDirectorPrompt ?? null,
@@ -737,6 +885,7 @@ export default function Home() {
           data.characterBiblePrompt ?? scene.characterBiblePrompt,
         visualDirectorScenePrompt: mastered.visualDirectorScenePrompt,
         visualDirectorPrompt: mastered.visualDirectorPrompt,
+        visualDirectorWarning: sceneWarning ?? null,
         visualDirectorError: null,
       };
     });
@@ -832,6 +981,7 @@ export default function Home() {
         masterData.characterBiblePrompt ??
         scene.characterBiblePrompt,
       masterDirectorPrompt: updatedScene.masterDirectorPrompt,
+      visualDirectorWarning: null,
       visualDirectorError: null,
     };
   }
@@ -853,17 +1003,22 @@ export default function Home() {
     scene: SceneWithImage,
     withAdditionalInstruction = false
   ): Promise<{ imageUrl: string | null; imageError: string | null }> {
-    if (!scene.visualDirectorPrompt) {
+    const resolved = resolveSceneImagePrompt(scene);
+    if (!resolved.prompt) {
       return {
         imageUrl: null,
-        imageError:
-          scene.visualDirectorError ||
-          "Visual Director Promptが未生成のため、画像を生成できません。",
+        imageError: resolved.error || "Visual Director Promptが未生成のため、画像を生成できません。",
       };
     }
 
+    if (resolved.warning && resolved.warning !== scene.visualDirectorWarning) {
+      updateScene(scene.sceneNumber, {
+        visualDirectorWarning: resolved.warning,
+      });
+    }
+
     try {
-      let prompt = scene.visualDirectorPrompt;
+      let prompt = resolved.prompt;
       const characterPrompt = getCharacterPromptForScene(scene);
 
       if (withAdditionalInstruction) {
@@ -879,7 +1034,7 @@ export default function Home() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            visualDirectorPrompt: scene.visualDirectorPrompt,
+            visualDirectorPrompt: resolved.prompt,
             characterBiblePrompt: characterPrompt,
             additionalInstruction: instruction,
           }),
@@ -965,12 +1120,13 @@ export default function Home() {
 
     try {
       const sceneForGeneration = await prepareSceneForImageGeneration(scene);
+      const resolved = resolveSceneImagePrompt(sceneForGeneration);
 
-      if (!sceneForGeneration.visualDirectorPrompt) {
+      if (!resolved.prompt) {
         updateScene(sceneNumber, {
           variantsLoading: false,
           variantError:
-            sceneForGeneration.visualDirectorError ||
+            resolved.error ||
             "Visual Director Promptが未生成のため、4案を生成できません。",
         });
         return;
@@ -980,7 +1136,7 @@ export default function Home() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          visualDirectorPrompt: sceneForGeneration.visualDirectorPrompt,
+          visualDirectorPrompt: resolved.prompt,
           characterBiblePrompt: getCharacterPromptForScene(sceneForGeneration),
         }),
       });
@@ -1473,8 +1629,8 @@ export default function Home() {
                     isRegenerating ||
                     scene.imageLoading ||
                     scene.variantsLoading;
-                  const canGenerateImageOnly =
-                    Boolean(scene.visualDirectorPrompt) &&
+                  const canAttemptImageGeneration =
+                    sceneHasImagePromptSource(scene) &&
                     !scene.imageLoading &&
                     !isRegenerating &&
                     !scene.variantsLoading;
@@ -1485,15 +1641,16 @@ export default function Home() {
                         ? "画像を再生成中..."
                         : "画像を生成中...";
                   const showImageGenerateButton =
-                    canGenerateImageOnly &&
+                    canAttemptImageGeneration &&
                     !scene.imageUrl &&
                     !scene.imageError &&
+                    !scene.visualDirectorError &&
                     loadingPhase === "idle";
                   const showImageOnlyRetry =
-                    canGenerateImageOnly &&
-                    !scene.imageUrl &&
-                    Boolean(scene.imageError) &&
-                    loadingPhase === "idle";
+                    canAttemptImageGeneration &&
+                    loadingPhase === "idle" &&
+                    (Boolean(scene.imageError) ||
+                      Boolean(scene.visualDirectorError));
 
                   return (
                   <li key={sceneKey} className={styles.sceneCard}>
@@ -1592,6 +1749,12 @@ export default function Home() {
                       </button>
                     )}
 
+                    {scene.visualDirectorWarning && (
+                      <p className={styles.promptWarning}>
+                        {scene.visualDirectorWarning}
+                      </p>
+                    )}
+
                     <div className={styles.sceneImageWrap}>
                       {scene.imageLoading && (
                         <div className={styles.imagePlaceholder}>
@@ -1609,13 +1772,15 @@ export default function Home() {
                       )}
                       {!scene.imageLoading &&
                         !scene.imageUrl &&
-                        scene.imageError && (
+                        (scene.imageError || scene.visualDirectorError) && (
                           <div className={styles.imageError}>
                             <span className={styles.imageErrorLabel}>
-                              画像生成エラー
+                              {scene.imageError
+                                ? "画像生成エラー"
+                                : "プロンプト警告"}
                             </span>
                             <p className={styles.imageErrorText}>
-                              {scene.imageError}
+                              {scene.imageError || scene.visualDirectorError}
                             </p>
                             {showImageOnlyRetry && (
                               <button
@@ -1632,7 +1797,8 @@ export default function Home() {
                         )}
                       {!scene.imageLoading &&
                         !scene.imageUrl &&
-                        !scene.imageError && (
+                        !scene.imageError &&
+                        !scene.visualDirectorError && (
                           <div className={styles.imagePlaceholder}>
                             <span className={styles.imageLoadingText}>
                               {loadingPhase === "cinematic"
@@ -1724,7 +1890,7 @@ export default function Home() {
                           isRegenerating ||
                           scene.imageLoading ||
                           scene.variantsLoading ||
-                          !scene.visualDirectorPrompt
+                          !sceneHasImagePromptSource(scene)
                         }
                       >
                         画像を再生成
@@ -1755,7 +1921,7 @@ export default function Home() {
                         isRegenerating ||
                         scene.imageLoading ||
                         scene.variantsLoading ||
-                        !scene.visualDirectorPrompt ||
+                        !sceneHasImagePromptSource(scene) ||
                         !scene.additionalInstruction.trim()
                       }
                     >
@@ -1771,7 +1937,7 @@ export default function Home() {
                         isRegenerating ||
                         scene.imageLoading ||
                         scene.variantsLoading ||
-                        !scene.visualDirectorPrompt
+                        !sceneHasImagePromptSource(scene)
                       }
                     >
                       4案生成

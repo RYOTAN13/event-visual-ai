@@ -69,6 +69,7 @@ export function createEmptySceneFromTemplate(
     cameraDirectorPrompt: template.cameraDirectorPrompt,
     visualDirectorScenePrompt: null,
     visualDirectorPrompt: null,
+    visualDirectorWarning: null,
     visualDirectorError: null,
     characterBiblePrompt: template.characterBiblePrompt,
     additionalInstruction: "",

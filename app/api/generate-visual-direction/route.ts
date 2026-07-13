@@ -6,7 +6,9 @@ import {
 } from "@/lib/character-bible";
 import {
   VISUAL_DIRECTOR_AI_SYSTEM_PROMPT,
-  isValidVisualDirectorScenePrompt,
+  isVisualDirectorScenePromptEmpty,
+  isShortVisualDirectorScenePrompt,
+  getShortPromptWarning,
   validateUniqueFraming,
   type SceneDirectionMeta,
 } from "@/lib/visual-director";
@@ -123,7 +125,7 @@ export async function POST(request: Request) {
             "",
             `Generate ${batchSize} scene-level storyboard frame(s). Execute each locked Camera Director cut.`,
             "Only include characters listed for each scene.",
-            "Each visualDirectorPrompt must be at least 1200 characters (scene cinematography only).",
+            "Each visualDirectorPrompt should be richly detailed scene cinematography (aim for 1200+ characters when possible).",
             "Do NOT include Cinematic Director, Camera Director, or Character Bible in output.",
             "",
             sceneContext,
@@ -191,39 +193,46 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: framingError }, { status: 502 });
     }
 
-    const results = data.scenes.map((scene) => ({
-      sceneNumber: scene.sceneNumber,
-      cameraAngle: scene.cameraAngle,
-      lens: scene.lens,
-      shotSize: scene.shotSize,
-      focus: scene.focus,
-      cameraMovement: scene.cameraMovement,
-      lighting: scene.lighting,
-      framingSignature: scene.framingSignature,
-      visualDirectorScenePrompt: scene.visualDirectorPrompt,
-    }));
+    const warnings: string[] = [];
 
-    for (const result of results) {
-      if (!isValidVisualDirectorScenePrompt(result.visualDirectorScenePrompt)) {
-        return NextResponse.json(
-          {
-            error: `${result.sceneNumber} のVisual Director Promptが1200文字未満です。`,
-          },
-          { status: 502 }
+    const results = data.scenes.map((scene) => {
+      const scenePrompt = scene.visualDirectorPrompt.trim();
+      if (isVisualDirectorScenePromptEmpty(scenePrompt)) {
+        throw new Error(
+          `${scene.sceneNumber} のVisual Director Promptが空です。`
         );
       }
-    }
+      if (isShortVisualDirectorScenePrompt(scenePrompt)) {
+        warnings.push(
+          getShortPromptWarning(scene.sceneNumber, scenePrompt.length)
+        );
+      }
+
+      return {
+        sceneNumber: scene.sceneNumber,
+        cameraAngle: scene.cameraAngle,
+        lens: scene.lens,
+        shotSize: scene.shotSize,
+        focus: scene.focus,
+        cameraMovement: scene.cameraMovement,
+        lighting: scene.lighting,
+        framingSignature: scene.framingSignature,
+        visualDirectorScenePrompt: scenePrompt,
+      };
+    });
 
     return NextResponse.json({
       characterBible,
       characterBiblePrompt,
       scenes: results,
+      warnings,
     });
   } catch (error) {
     const message =
       error instanceof Error
         ? error.message
         : "Visual Director AIの設計に失敗しました。";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const status = message.includes("空です") ? 502 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
