@@ -3,6 +3,7 @@ import type { SceneCount } from "@/lib/utils/scene-count";
 import type { FactPack, SceneWithImage } from "@/lib/types";
 import type { CharacterStudio } from "@/lib/types/character-studio";
 import { DEFAULT_CHARACTER_STUDIO } from "@/lib/types/character-studio";
+import type { ThumbnailStudioState } from "@/lib/types/thumbnail-studio";
 
 export const PROJECT_STORAGE_KEY = "event-visual-project";
 export const PROJECT_STORAGE_VERSION = 1;
@@ -24,6 +25,8 @@ export type StoredProject = {
   editedScript: string;
   scriptCharCount: number;
   characterStudio: CharacterStudio;
+  /** Scene画像から独立した事件系YouTubeサムネイル制作状態 */
+  thumbnail: ThumbnailStudioState;
   /** Character Bible / Visual Director / 画像 / 4案 / 採用 / 追加指示を含む */
   scenes: SceneWithImage[];
 };

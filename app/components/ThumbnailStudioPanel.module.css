@@ -1,0 +1,519 @@
+.studio {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.hero,
+.formPanel,
+.editor {
+  background:
+    linear-gradient(145deg, rgba(35, 10, 15, 0.45), transparent 45%),
+    #101218;
+  border: 1px solid #2b2f39;
+  border-radius: 0.875rem;
+}
+
+.hero {
+  padding: 1.75rem;
+  border-color: rgba(185, 28, 28, 0.35);
+}
+
+.version {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #ef4444;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+}
+
+.hero h2 {
+  margin: 0 0 0.5rem;
+  color: #f8fafc;
+  font-size: 1.75rem;
+}
+
+.hero p {
+  margin: 0;
+  color: #9299a6;
+  line-height: 1.7;
+}
+
+.formPanel,
+.editor {
+  padding: 1.5rem;
+}
+
+.fieldGrid,
+.textControls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.field > span,
+.rangeField > span,
+.colorField > span,
+.positionControls span {
+  color: #9ca3af;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.field input,
+.field textarea,
+.field select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.75rem 0.875rem;
+  color: #eef2f7;
+  background: #090b10;
+  border: 1px solid #303541;
+  border-radius: 0.5rem;
+  outline: none;
+  font: inherit;
+}
+
+.field input:focus,
+.field textarea:focus,
+.field select:focus {
+  border-color: #b91c1c;
+  box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.16);
+}
+
+.field textarea {
+  resize: vertical;
+}
+
+.field small {
+  color: #646b77;
+  font-size: 0.7rem;
+  line-height: 1.5;
+}
+
+.moodField {
+  margin: 1.25rem 0;
+  padding: 0;
+  border: 0;
+}
+
+.moodField legend {
+  margin-bottom: 0.65rem;
+  color: #9ca3af;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.moodGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.moodChip {
+  padding: 0.5rem 0.8rem;
+  color: #aeb4bf;
+  background: #0b0d12;
+  border: 1px solid #303541;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 0.78rem;
+  transition: 0.15s ease;
+}
+
+.moodChip input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.moodChipActive {
+  color: #fff;
+  background: rgba(185, 28, 28, 0.28);
+  border-color: #dc2626;
+}
+
+.conceptButton,
+.backgroundButton,
+.downloadActions button {
+  border: 0;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-weight: 700;
+  transition: opacity 0.15s ease, transform 0.1s ease;
+}
+
+.conceptButton {
+  width: 100%;
+  margin-top: 1.25rem;
+  padding: 0.9rem;
+  color: #fff;
+  background: linear-gradient(135deg, #b91c1c, #7f1d1d);
+}
+
+.conceptButton:disabled,
+.backgroundButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.conceptButton:hover:not(:disabled),
+.backgroundButton:hover:not(:disabled),
+.downloadActions button:hover {
+  opacity: 0.88;
+}
+
+.error {
+  margin: 0.75rem 0 0;
+  padding: 0.7rem 0.8rem;
+  color: #fca5a5;
+  background: rgba(127, 29, 29, 0.18);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.concepts > h3,
+.previewSection > h3 {
+  margin: 0 0 0.9rem;
+  color: #e5e7eb;
+  font-size: 1rem;
+}
+
+.conceptGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.conceptCard {
+  padding: 1rem;
+  background: #101218;
+  border: 1px solid #2b2f39;
+  border-radius: 0.75rem;
+  transition: border-color 0.15s ease;
+}
+
+.conceptCardSelected {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.2);
+}
+
+.conceptHeader {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+  color: #ef4444;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+}
+
+.conceptHeader b {
+  color: #fca5a5;
+}
+
+.conceptCard h4 {
+  margin: 0 0 0.9rem;
+  color: #f8fafc;
+  font-size: 1.1rem;
+}
+
+.conceptDetails {
+  display: grid;
+  gap: 0.65rem;
+  margin: 0;
+}
+
+.conceptDetails div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.conceptDetails dt {
+  color: #686f7b;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.conceptDetails dd {
+  margin: 0;
+  color: #bcc2cc;
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
+.backgroundButton {
+  width: 100%;
+  margin-top: 1rem;
+  padding: 0.75rem;
+  color: #fff;
+  background: #991b1b;
+}
+
+.cardError {
+  margin-top: 0.75rem;
+  padding: 0.7rem;
+  color: #fca5a5;
+  background: rgba(127, 29, 29, 0.18);
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+}
+
+.cardError p {
+  margin: 0 0 0.5rem;
+}
+
+.cardError button {
+  padding: 0;
+  color: #fff;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.cardImageButton {
+  display: block;
+  width: 100%;
+  margin: 0 0 0.9rem;
+  padding: 0;
+  overflow: hidden;
+  background: transparent;
+  border: 1px solid #343946;
+  border-radius: 0.45rem;
+  cursor: pointer;
+}
+
+.thumbnailCanvas {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  container-type: inline-size;
+  aspect-ratio: 16 / 9;
+  background: #050609;
+}
+
+.thumbnailCanvasCompact {
+  max-width: 360px;
+}
+
+.thumbnailImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.thumbnailPlaceholder {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: #3f4652;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+}
+
+.thumbnailText {
+  --translate-x: 0;
+  --translate-y: 0;
+  position: absolute;
+  z-index: 1;
+  max-width: 82%;
+  color: var(--thumbnail-color);
+  font-family: "Noto Sans JP", "Arial Black", sans-serif;
+  font-size: var(--thumbnail-font-size);
+  font-weight: 900;
+  line-height: 1.06;
+  overflow-wrap: anywhere;
+  -webkit-text-stroke: var(--thumbnail-outline-width)
+    var(--thumbnail-outline);
+  paint-order: stroke fill;
+  transform: translate(var(--translate-x), var(--translate-y));
+}
+
+.thumbnailTextShadow {
+  text-shadow: 0.04em 0.06em 0.12em rgba(0, 0, 0, 0.95);
+}
+
+.horizontal_left {
+  left: 4%;
+  text-align: left;
+}
+
+.horizontal_center {
+  --translate-x: -50%;
+  left: 50%;
+  text-align: center;
+}
+
+.horizontal_right {
+  right: 4%;
+  text-align: right;
+}
+
+.vertical_top {
+  top: 7%;
+}
+
+.vertical_center {
+  --translate-y: -50%;
+  top: 50%;
+}
+
+.vertical_bottom {
+  bottom: 7%;
+}
+
+.editorHeader {
+  margin-bottom: 1rem;
+}
+
+.editorHeader span {
+  color: #ef4444;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.editorHeader h3 {
+  margin: 0.25rem 0 0;
+  color: #f8fafc;
+}
+
+.largePreview {
+  overflow: hidden;
+  margin-bottom: 1.25rem;
+  border: 1px solid #343946;
+  border-radius: 0.65rem;
+}
+
+.textControls {
+  align-items: end;
+}
+
+.rangeField,
+.colorField,
+.checkField {
+  display: grid;
+  gap: 0.5rem;
+  color: #c4c9d2;
+  font-size: 0.8rem;
+}
+
+.rangeField input {
+  accent-color: #dc2626;
+}
+
+.colorField input {
+  width: 100%;
+  height: 2.75rem;
+  padding: 0.2rem;
+  background: #090b10;
+  border: 1px solid #303541;
+  border-radius: 0.45rem;
+}
+
+.checkField {
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
+}
+
+.checkField input {
+  accent-color: #dc2626;
+}
+
+.positionControls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.positionControls > div {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.35rem;
+}
+
+.positionControls span {
+  grid-column: 1 / -1;
+}
+
+.positionControls button {
+  padding: 0.55rem 0.35rem;
+  color: #9ca3af;
+  background: #090b10;
+  border: 1px solid #303541;
+  border-radius: 0.4rem;
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+.positionControls .positionActive {
+  color: #fff;
+  background: #7f1d1d;
+  border-color: #dc2626;
+}
+
+.previewSection {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #2b2f39;
+}
+
+.previewGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(180px, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.previewGrid > div {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.previewGrid > div > span {
+  color: #747b87;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.downloadActions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.downloadActions button {
+  flex: 1;
+  padding: 0.8rem;
+  color: #fff;
+  background: linear-gradient(135deg, #991b1b, #450a0a);
+}
+
+@media (max-width: 700px) {
+  .fieldGrid,
+  .conceptGrid,
+  .textControls,
+  .positionControls,
+  .previewGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .formPanel,
+  .editor {
+    padding: 1rem;
+  }
+}

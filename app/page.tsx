@@ -44,6 +44,7 @@ import {
 } from "@/lib/storage/project-storage";
 import { SceneEditableField } from "@/app/components/SceneEditableField";
 import { CharacterStudioPanel } from "@/app/components/CharacterStudioPanel";
+import { ThumbnailStudioPanel } from "@/app/components/ThumbnailStudioPanel";
 import {
   buildEffectiveCharacterPrompt,
   normalizeCharacterStudio,
@@ -59,9 +60,15 @@ import {
   DEFAULT_CHARACTER_STUDIO,
   type CharacterStudio,
 } from "@/lib/types/character-studio";
+import {
+  DEFAULT_THUMBNAIL_STUDIO,
+  normalizeThumbnailStudio,
+  type ThumbnailStudioState,
+} from "@/lib/types/thumbnail-studio";
 import styles from "./page.module.css";
 
 type ScriptStatus = "idle" | "generating" | "ready";
+type WorkspaceTab = "production" | "thumbnail";
 type LoadingPhase =
   | "idle"
   | "fact-pack"
@@ -143,6 +150,10 @@ export default function Home() {
   const [characterStudio, setCharacterStudio] = useState<CharacterStudio>(
     DEFAULT_CHARACTER_STUDIO
   );
+  const [activeTab, setActiveTab] = useState<WorkspaceTab>("production");
+  const [thumbnail, setThumbnail] = useState<ThumbnailStudioState>(
+    DEFAULT_THUMBNAIL_STUDIO
+  );
 
   const loading = loadingPhase !== "idle";
   const [regeneratingScenes, setRegeneratingScenes] = useState<
@@ -183,6 +194,13 @@ export default function Home() {
       editedScript,
       scriptCharCount,
       characterStudio,
+      thumbnail: {
+        ...thumbnail,
+        concepts: thumbnail.concepts.map((concept) => ({
+          ...concept,
+          imageLoading: false,
+        })),
+      },
       scenes: scenes.map((scene) => ({
         ...scene,
         imageLoading: false,
@@ -216,6 +234,7 @@ export default function Home() {
     setEditedScript(project.editedScript);
     setScriptCharCount(project.scriptCharCount);
     setCharacterStudio(normalizeCharacterStudio(project.characterStudio));
+    setThumbnail(normalizeThumbnailStudio(project.thumbnail));
     setScenes(
       normalizeScenes(
         project.scenes.map((scene) =>
@@ -1406,7 +1425,13 @@ export default function Home() {
 
   return (
     <main className={styles.main}>
-      <div className={styles.container}>
+      <div
+        className={
+          activeTab === "thumbnail"
+            ? `${styles.container} ${styles.containerWide}`
+            : styles.container
+        }
+      >
         <header className={styles.header}>
           <div className={styles.headerTop}>
             <h1 className={styles.title}>Event Visual AI</h1>
@@ -1434,6 +1459,57 @@ export default function Home() {
           </p>
         </header>
 
+        <div
+          className={styles.workspaceTabs}
+          role="tablist"
+          aria-label="制作モード"
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "production"}
+            className={`${styles.workspaceTab} ${
+              activeTab === "production" ? styles.workspaceTabActive : ""
+            }`.trim()}
+            onMouseDown={(event) => {
+              event.preventDefault();
+              setActiveTab("production");
+            }}
+          >
+            本編制作
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "thumbnail"}
+            className={`${styles.workspaceTab} ${
+              activeTab === "thumbnail" ? styles.workspaceTabActive : ""
+            }`.trim()}
+            onMouseDown={(event) => {
+              event.preventDefault();
+              setThumbnail((current) => ({
+                ...current,
+                caseName: current.caseName || eventName,
+                videoTitle: current.videoTitle || scriptTitle || eventName,
+              }));
+              setActiveTab("thumbnail");
+            }}
+          >
+            Thumbnail Studio
+          </button>
+        </div>
+
+        {activeTab === "thumbnail" && (
+          <ThumbnailStudioPanel
+            value={thumbnail}
+            factPack={factPack}
+            script={activeScript}
+            onChange={setThumbnail}
+          />
+        )}
+
+        {activeTab === "production" && (
+          <>
         <div className={styles.styleField}>
           <label className={styles.styleLabel} htmlFor="scene-count">
             シーン数
@@ -2088,6 +2164,8 @@ export default function Home() {
             </div>
           )}
         </section>
+          </>
+        )}
       </div>
 
       {toast && (

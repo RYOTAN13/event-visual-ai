@@ -3,16 +3,18 @@ import { IMAGE_MODEL } from "@/lib/openai/client";
 
 export const IMAGE_SIZE = "1024x1024" as const;
 export type ImageQuality = "medium" | "high";
+export type ImageSize = "1024x1024" | "1536x1024" | "1024x1536";
 
 export async function generateSceneImage(
   openai: OpenAI,
   prompt: string,
-  quality: ImageQuality = "medium"
+  quality: ImageQuality = "medium",
+  size: ImageSize = IMAGE_SIZE
 ): Promise<string> {
   const response = await openai.images.generate({
     model: IMAGE_MODEL,
     prompt,
-    size: IMAGE_SIZE,
+    size,
     quality,
   });
 

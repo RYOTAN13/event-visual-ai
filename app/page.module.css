@@ -12,6 +12,11 @@
 .container {
   width: 100%;
   max-width: 720px;
+  transition: max-width 0.2s ease;
+}
+
+.containerWide {
+  max-width: 1120px;
 }
 
 .header {
@@ -77,6 +82,49 @@
   font-weight: 400;
   color: #8b919a;
   line-height: 1.6;
+}
+
+.workspaceTabs {
+  position: relative;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem;
+  margin-bottom: 1.75rem;
+  padding: 0.3rem;
+  background: #0d0f14;
+  border: 1px solid #252933;
+  border-radius: 0.65rem;
+}
+
+.workspaceTab {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.72rem 1rem;
+  color: #7f8793;
+  background: transparent;
+  border: 0;
+  border-radius: 0.45rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 700;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
+  user-select: none;
+}
+
+.workspaceTab:hover {
+  color: #d1d5db;
+}
+
+.workspaceTabActive {
+  color: #fff;
+  background: linear-gradient(135deg, #991b1b, #450a0a);
+  box-shadow: 0 1px 8px rgba(127, 29, 29, 0.25);
 }
 
 .form {
