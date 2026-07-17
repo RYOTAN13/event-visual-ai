@@ -74,7 +74,8 @@ export async function downloadThumbnail(
   context.lineJoin = "round";
   context.textAlign = style.horizontalAlign;
 
-  const lines = wrapCharacters(context, text, width * 0.78);
+  // UIオーバーレイ（max-width: 45%・最大3行）と同じ折り返しに合わせる
+  const lines = wrapCharacters(context, text, width * 0.45).slice(0, 3);
   const blockHeight = lineHeight * lines.length;
   const x =
     style.horizontalAlign === "left"

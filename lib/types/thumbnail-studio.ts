@@ -1,13 +1,3 @@
-export const THUMBNAIL_COMPOSITION_STYLES = [
-  "人物アップ",
-  "人物＋事件現場",
-  "人物＋法廷",
-  "人物＋証拠品",
-  "事件現場のみ",
-  "シルエット＋事件現場",
-  "新聞・資料風",
-] as const;
-
 export const THUMBNAIL_MOODS = [
   "冤罪",
   "恐怖",
@@ -20,11 +10,20 @@ export const THUMBNAIL_MOODS = [
   "真相",
 ] as const;
 
-export type ThumbnailCompositionStyle =
-  (typeof THUMBNAIL_COMPOSITION_STYLES)[number];
 export type ThumbnailMood = (typeof THUMBNAIL_MOODS)[number];
 export type ThumbnailHorizontalAlign = "left" | "center" | "right";
 export type ThumbnailVerticalAlign = "top" | "center" | "bottom";
+
+export const THUMBNAIL_VARIATION_IDS = ["A", "B", "C", "D"] as const;
+export type ThumbnailVariationId = (typeof THUMBNAIL_VARIATION_IDS)[number];
+
+export const THUMBNAIL_VARIATION_LABELS: Record<ThumbnailVariationId, string> =
+  {
+    A: "A 王道",
+    B: "B ドキュメンタリー",
+    C: "C 捜査・衝撃",
+    D: "D ミステリー",
+  };
 
 export type ThumbnailTextStyle = {
   fontSize: number;
@@ -36,19 +35,11 @@ export type ThumbnailTextStyle = {
   verticalAlign: ThumbnailVerticalAlign;
 };
 
-export type ThumbnailConcept = {
-  id: string;
-  catchCopy: string;
-  composition: string;
-  subjectDescription: string;
-  backgroundDescription: string;
-  colorDirection: string;
-  emotion: string;
-  ctrReason: string;
-  imagePrompt: string;
+export type ThumbnailImage = {
+  variation: ThumbnailVariationId;
   imageUrl: string | null;
-  imageLoading: boolean;
-  imageError: string | null;
+  loading: boolean;
+  error: string | null;
 };
 
 export type ThumbnailStudioState = {
@@ -58,10 +49,9 @@ export type ThumbnailStudioState = {
   person: string;
   background: string;
   additionalInstruction: string;
-  compositionStyle: ThumbnailCompositionStyle;
   moods: ThumbnailMood[];
-  concepts: ThumbnailConcept[];
-  selectedConceptId: string | null;
+  images: ThumbnailImage[];
+  adoptedVariation: ThumbnailVariationId | null;
   textStyle: ThumbnailTextStyle;
 };
 
@@ -75,6 +65,15 @@ export const DEFAULT_THUMBNAIL_TEXT_STYLE: ThumbnailTextStyle = {
   verticalAlign: "bottom",
 };
 
+export function createEmptyThumbnailImages(): ThumbnailImage[] {
+  return THUMBNAIL_VARIATION_IDS.map((variation) => ({
+    variation,
+    imageUrl: null,
+    loading: false,
+    error: null,
+  }));
+}
+
 export const DEFAULT_THUMBNAIL_STUDIO: ThumbnailStudioState = {
   caseName: "",
   videoTitle: "",
@@ -82,35 +81,51 @@ export const DEFAULT_THUMBNAIL_STUDIO: ThumbnailStudioState = {
   person: "",
   background: "",
   additionalInstruction: "",
-  compositionStyle: "人物＋事件現場",
   moods: [],
-  concepts: [],
-  selectedConceptId: null,
+  images: createEmptyThumbnailImages(),
+  adoptedVariation: null,
   textStyle: DEFAULT_THUMBNAIL_TEXT_STYLE,
 };
 
 export function normalizeThumbnailStudio(
   value: Partial<ThumbnailStudioState> | null | undefined
 ): ThumbnailStudioState {
-  const concepts = Array.isArray(value?.concepts)
-    ? value.concepts.map((concept, index) => ({
-        ...concept,
-        id: concept.id || `thumbnail-${index + 1}`,
-        imageUrl: concept.imageUrl ?? null,
-        imageLoading: false,
-        imageError: null,
-      }))
-    : [];
+  const savedImages = Array.isArray(value?.images) ? value.images : [];
+  const images = THUMBNAIL_VARIATION_IDS.map((variation) => {
+    const saved = savedImages.find((item) => item?.variation === variation);
+    return {
+      variation,
+      imageUrl: saved?.imageUrl ?? null,
+      loading: false,
+      error: null,
+    };
+  });
 
   return {
-    ...DEFAULT_THUMBNAIL_STUDIO,
-    ...value,
-    moods: Array.isArray(value?.moods) ? value.moods : [],
-    concepts,
-    selectedConceptId:
-      value?.selectedConceptId &&
-      concepts.some((concept) => concept.id === value.selectedConceptId)
-        ? value.selectedConceptId
+    caseName: typeof value?.caseName === "string" ? value.caseName : "",
+    videoTitle: typeof value?.videoTitle === "string" ? value.videoTitle : "",
+    thumbnailText:
+      typeof value?.thumbnailText === "string" ? value.thumbnailText : "",
+    person: typeof value?.person === "string" ? value.person : "",
+    background: typeof value?.background === "string" ? value.background : "",
+    additionalInstruction:
+      typeof value?.additionalInstruction === "string"
+        ? value.additionalInstruction
+        : "",
+    moods: Array.isArray(value?.moods)
+      ? value.moods.filter((mood): mood is ThumbnailMood =>
+          (THUMBNAIL_MOODS as readonly string[]).includes(mood as string)
+        )
+      : [],
+    images,
+    adoptedVariation:
+      value?.adoptedVariation &&
+      THUMBNAIL_VARIATION_IDS.includes(value.adoptedVariation) &&
+      images.some(
+        (image) =>
+          image.variation === value.adoptedVariation && image.imageUrl
+      )
+        ? value.adoptedVariation
         : null,
     textStyle: {
       ...DEFAULT_THUMBNAIL_TEXT_STYLE,

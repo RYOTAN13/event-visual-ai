@@ -8,12 +8,14 @@ import {
 } from "react";
 import type { FactPack } from "@/lib/types";
 import {
-  THUMBNAIL_COMPOSITION_STYLES,
   THUMBNAIL_MOODS,
-  type ThumbnailConcept,
+  THUMBNAIL_VARIATION_IDS,
+  THUMBNAIL_VARIATION_LABELS,
   type ThumbnailHorizontalAlign,
+  type ThumbnailImage,
   type ThumbnailMood,
   type ThumbnailStudioState,
+  type ThumbnailVariationId,
   type ThumbnailVerticalAlign,
 } from "@/lib/types/thumbnail-studio";
 import { downloadThumbnail } from "@/lib/thumbnail-studio/export-thumbnail";
@@ -27,11 +29,11 @@ type Props = {
 };
 
 function ThumbnailCanvas({
-  concept,
+  imageUrl,
   state,
   compact = false,
 }: {
-  concept: ThumbnailConcept;
+  imageUrl: string | null;
   state: ThumbnailStudioState;
   compact?: boolean;
 }) {
@@ -52,10 +54,10 @@ function ThumbnailCanvas({
       }`}
       style={textStyle}
     >
-      {concept.imageUrl ? (
+      {imageUrl ? (
         <img
           className={styles.thumbnailImage}
-          src={concept.imageUrl}
+          src={imageUrl}
           alt=""
           draggable={false}
         />
@@ -82,24 +84,29 @@ export function ThumbnailStudioPanel({
   script,
   onChange,
 }: Props) {
-  const [conceptsLoading, setConceptsLoading] = useState(false);
-  const [conceptsError, setConceptsError] = useState("");
+  const [formError, setFormError] = useState("");
   const [downloadError, setDownloadError] = useState("");
 
-  const selectedConcept =
-    value.concepts.find(
-      (concept) => concept.id === value.selectedConceptId
+  const hasAnyImage = value.images.some((image) => image.imageUrl);
+  const isGenerating = value.images.some((image) => image.loading);
+  const adoptedImage =
+    value.images.find(
+      (image) =>
+        image.variation === value.adoptedVariation && image.imageUrl
     ) ?? null;
 
   function updateState(patch: Partial<ThumbnailStudioState>) {
     onChange((current) => ({ ...current, ...patch }));
   }
 
-  function updateConcept(id: string, patch: Partial<ThumbnailConcept>) {
+  function updateImage(
+    variation: ThumbnailVariationId,
+    patch: Partial<ThumbnailImage>
+  ) {
     onChange((current) => ({
       ...current,
-      concepts: current.concepts.map((concept) =>
-        concept.id === id ? { ...concept, ...patch } : concept
+      images: current.images.map((image) =>
+        image.variation === variation ? { ...image, ...patch } : image
       ),
     }));
   }
@@ -112,32 +119,19 @@ export function ThumbnailStudioPanel({
     });
   }
 
-  async function handleGenerateConcepts() {
-    if (
-      !value.caseName.trim() ||
-      !value.videoTitle.trim() ||
-      !value.thumbnailText.trim()
-    ) {
-      setConceptsError(
-        "事件名・動画タイトル・サムネ文字を入力してください。"
-      );
-      return;
-    }
-
-    setConceptsLoading(true);
-    setConceptsError("");
+  async function generateVariation(variation: ThumbnailVariationId) {
+    updateImage(variation, { loading: true, error: null });
 
     try {
-      const response = await fetch("/api/generate-thumbnail-concepts", {
+      const response = await fetch("/api/generate-thumbnail-image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          variation,
           caseName: value.caseName,
           videoTitle: value.videoTitle,
-          thumbnailText: value.thumbnailText,
           person: value.person,
           background: value.background,
-          compositionStyle: value.compositionStyle,
           moods: value.moods,
           additionalInstruction: value.additionalInstruction,
           factPack,
@@ -147,79 +141,45 @@ export function ThumbnailStudioPanel({
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "サムネ案の生成に失敗しました。");
+        throw new Error(data.error || "画像生成に失敗しました");
       }
 
-      const concepts: ThumbnailConcept[] = data.concepts.map(
-        (concept: Omit<
-          ThumbnailConcept,
-          "imageUrl" | "imageLoading" | "imageError"
-        >) => ({
-          ...concept,
-          imageUrl: null,
-          imageLoading: false,
-          imageError: null,
-        })
-      );
-
-      updateState({
-        concepts,
-        selectedConceptId: concepts[0]?.id ?? null,
+      updateImage(variation, {
+        imageUrl: data.imageUrl,
+        loading: false,
+        error: null,
       });
     } catch (error) {
-      setConceptsError(
-        error instanceof Error ? error.message : "サムネ案の生成に失敗しました。"
-      );
-    } finally {
-      setConceptsLoading(false);
-    }
-  }
-
-  async function handleGenerateBackground(concept: ThumbnailConcept) {
-    updateConcept(concept.id, { imageLoading: true, imageError: null });
-
-    try {
-      const response = await fetch("/api/generate-thumbnail-image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          imagePrompt: concept.imagePrompt,
-          additionalInstruction: value.additionalInstruction,
-        }),
-      });
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "背景画像の生成に失敗しました。");
-      }
-
-      onChange((current) => ({
-        ...current,
-        selectedConceptId: concept.id,
-        concepts: current.concepts.map((item) =>
-          item.id === concept.id
-            ? {
-                ...item,
-                imageUrl: data.imageUrl,
-                imageLoading: false,
-                imageError: null,
-              }
-            : item
-        ),
-      }));
-    } catch (error) {
-      updateConcept(concept.id, {
-        imageLoading: false,
-        imageError:
-          error instanceof Error
-            ? error.message
-            : "背景画像の生成に失敗しました。",
+      updateImage(variation, {
+        loading: false,
+        error:
+          error instanceof Error ? error.message : "画像生成に失敗しました",
       });
     }
   }
 
-  async function handleDownload(format: "png" | "jpg") {
-    if (!selectedConcept?.imageUrl) return;
+  async function handleGenerateAll() {
+    if (
+      !value.caseName.trim() ||
+      !value.videoTitle.trim() ||
+      !value.thumbnailText.trim()
+    ) {
+      setFormError("事件名・動画タイトル・サムネ文字を入力してください。");
+      return;
+    }
+
+    setFormError("");
+    // 4枚は独立して生成・失敗する。1枚失敗しても残り3枚はそのまま表示する。
+    await Promise.allSettled(
+      THUMBNAIL_VARIATION_IDS.map((variation) => generateVariation(variation))
+    );
+  }
+
+  async function handleDownload(
+    image: ThumbnailImage,
+    format: "png" | "jpg"
+  ) {
+    if (!image.imageUrl) return;
     setDownloadError("");
 
     try {
@@ -229,11 +189,11 @@ export function ThumbnailStudioPanel({
           .replace(/[^\w\u3040-\u30ff\u4e00-\u9faf-]+/g, "-")
           .replace(/^-+|-+$/g, "") || "thumbnail";
       await downloadThumbnail(
-        selectedConcept.imageUrl,
+        image.imageUrl,
         value.thumbnailText,
         value.textStyle,
         format,
-        `${safeName}-thumbnail`
+        `${safeName}-${image.variation}`
       );
     } catch (error) {
       setDownloadError(
@@ -245,9 +205,11 @@ export function ThumbnailStudioPanel({
   return (
     <section className={styles.studio}>
       <div className={styles.hero}>
-        <span className={styles.version}>VER 2.2 · SPRINT 1</span>
+        <span className={styles.version}>VER 2.3 · DIRECT 4-UP</span>
         <h2>Thumbnail Studio</h2>
-        <p>事件系YouTube動画専用。事実性を維持した4つのサムネ案を設計します。</p>
+        <p>
+          事件系YouTube動画専用。入力からワンクリックで4方向のサムネイルを生成します。
+        </p>
       </div>
 
       <div className={styles.formPanel}>
@@ -303,24 +265,6 @@ export function ThumbnailStudioPanel({
               placeholder="例：事件当時の街並み、法廷"
             />
           </label>
-          <label className={styles.field}>
-            <span>構図スタイル</span>
-            <select
-              value={value.compositionStyle}
-              onChange={(event) =>
-                updateState({
-                  compositionStyle: event.target
-                    .value as ThumbnailStudioState["compositionStyle"],
-                })
-              }
-            >
-              {THUMBNAIL_COMPOSITION_STYLES.map((style) => (
-                <option key={style} value={style}>
-                  {style}
-                </option>
-              ))}
-            </select>
-          </label>
         </div>
 
         <fieldset className={styles.moodField}>
@@ -359,117 +303,116 @@ export function ThumbnailStudioPanel({
         <button
           type="button"
           className={styles.conceptButton}
-          onClick={handleGenerateConcepts}
-          disabled={conceptsLoading}
+          onClick={handleGenerateAll}
+          disabled={isGenerating}
         >
-          {conceptsLoading ? "4案を設計中..." : "サムネ案を4案生成"}
+          {isGenerating ? "4枚を生成中..." : "サムネイルを4枚生成"}
         </button>
-        {conceptsError && <p className={styles.error}>{conceptsError}</p>}
+        {formError && <p className={styles.error}>{formError}</p>}
       </div>
 
-      {value.concepts.length > 0 && (
+      {(hasAnyImage || isGenerating) && (
         <div className={styles.concepts}>
-          <h3>サムネ案</h3>
+          <h3>生成サムネイル</h3>
           <div className={styles.conceptGrid}>
-            {value.concepts.map((concept, index) => (
-              <article
-                key={concept.id}
-                className={`${styles.conceptCard} ${
-                  value.selectedConceptId === concept.id
-                    ? styles.conceptCardSelected
-                    : ""
-                }`}
-              >
-                <div className={styles.conceptHeader}>
-                  <span>案 {index + 1}</span>
-                  {value.selectedConceptId === concept.id && (
-                    <b>選択中</b>
-                  )}
-                </div>
-
-                {concept.imageUrl && (
-                  <button
-                    type="button"
-                    className={styles.cardImageButton}
-                    onClick={() =>
-                      updateState({ selectedConceptId: concept.id })
-                    }
-                    aria-label={`案 ${index + 1} を選択`}
-                  >
-                    <ThumbnailCanvas concept={concept} state={value} compact />
-                  </button>
-                )}
-
-                <h4>{concept.catchCopy}</h4>
-                <dl className={styles.conceptDetails}>
-                  <div>
-                    <dt>構図</dt>
-                    <dd>{concept.composition}</dd>
-                  </div>
-                  <div>
-                    <dt>人物</dt>
-                    <dd>{concept.subjectDescription}</dd>
-                  </div>
-                  <div>
-                    <dt>背景</dt>
-                    <dd>{concept.backgroundDescription}</dd>
-                  </div>
-                  <div>
-                    <dt>色</dt>
-                    <dd>{concept.colorDirection}</dd>
-                  </div>
-                  <div>
-                    <dt>感情</dt>
-                    <dd>{concept.emotion}</dd>
-                  </div>
-                  <div>
-                    <dt>CTRを狙う理由</dt>
-                    <dd>{concept.ctrReason}</dd>
-                  </div>
-                </dl>
-
-                <button
-                  type="button"
-                  className={styles.backgroundButton}
-                  onClick={() => handleGenerateBackground(concept)}
-                  disabled={concept.imageLoading}
+            {value.images.map((image) => {
+              const isAdopted =
+                value.adoptedVariation === image.variation &&
+                Boolean(image.imageUrl);
+              return (
+                <article
+                  key={image.variation}
+                  className={`${styles.conceptCard} ${
+                    isAdopted ? styles.conceptCardSelected : ""
+                  }`}
                 >
-                  {concept.imageLoading
-                    ? "背景画像を生成中..."
-                    : concept.imageUrl
-                      ? "この案で背景画像を再生成"
-                      : "この案で背景画像を生成"}
-                </button>
+                  <div className={styles.conceptHeader}>
+                    <span>
+                      {THUMBNAIL_VARIATION_LABELS[image.variation]}
+                    </span>
+                    {isAdopted && <b className={styles.adoptedBadge}>採用中</b>}
+                  </div>
 
-                {concept.imageError && (
-                  <div className={styles.cardError}>
-                    <p>{concept.imageError}</p>
+                  {image.loading ? (
+                    <div className={styles.cardLoading}>生成中...</div>
+                  ) : image.imageUrl ? (
+                    <ThumbnailCanvas imageUrl={image.imageUrl} state={value} />
+                  ) : image.error ? (
+                    <div className={styles.cardError}>
+                      <p>画像生成に失敗しました</p>
+                      <p className={styles.cardErrorDetail}>{image.error}</p>
+                    </div>
+                  ) : (
+                    <div className={styles.cardLoading}>未生成</div>
+                  )}
+
+                  <div className={styles.cardActions}>
                     <button
                       type="button"
-                      onClick={() => handleGenerateBackground(concept)}
+                      className={styles.backgroundButton}
+                      onClick={() => generateVariation(image.variation)}
+                      disabled={image.loading}
                     >
-                      もう一度生成
+                      この画像だけ再生成
                     </button>
+                    {image.imageUrl && !image.loading && (
+                      <>
+                        <div className={styles.cardDownloadRow}>
+                          <button
+                            type="button"
+                            onClick={() => handleDownload(image, "png")}
+                          >
+                            PNGダウンロード
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDownload(image, "jpg")}
+                          >
+                            JPGダウンロード
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          className={`${styles.adoptButton} ${
+                            isAdopted ? styles.adoptButtonActive : ""
+                          }`}
+                          onClick={() =>
+                            updateState({
+                              adoptedVariation: image.variation,
+                            })
+                          }
+                          disabled={isAdopted}
+                        >
+                          {isAdopted ? "採用中" : "採用"}
+                        </button>
+                      </>
+                    )}
                   </div>
-                )}
-              </article>
-            ))}
+                </article>
+              );
+            })}
           </div>
+          {downloadError && <p className={styles.error}>{downloadError}</p>}
         </div>
       )}
 
-      {selectedConcept?.imageUrl && (
+      {hasAnyImage && (
         <div className={styles.editor}>
           <div className={styles.editorHeader}>
             <div>
-              <span>SELECTED CONCEPT</span>
+              <span>TEXT OVERLAY</span>
               <h3>サムネ文字・レイアウト編集</h3>
             </div>
           </div>
 
-          <div className={styles.largePreview}>
-            <ThumbnailCanvas concept={selectedConcept} state={value} />
-          </div>
+          {adoptedImage && (
+            <div className={styles.largePreview}>
+              <ThumbnailCanvas
+                imageUrl={adoptedImage.imageUrl}
+                state={value}
+              />
+            </div>
+          )}
 
           <div className={styles.textControls}>
             <label className={styles.field}>
@@ -630,34 +573,6 @@ export function ThumbnailStudioPanel({
               )}
             </div>
           </div>
-
-          <div className={styles.previewSection}>
-            <h3>プレビュー</h3>
-            <div className={styles.previewGrid}>
-              <div>
-                <span>1280 × 720</span>
-                <ThumbnailCanvas concept={selectedConcept} state={value} />
-              </div>
-              <div>
-                <span>YouTube一覧縮小表示</span>
-                <ThumbnailCanvas
-                  concept={selectedConcept}
-                  state={value}
-                  compact
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className={styles.downloadActions}>
-            <button type="button" onClick={() => handleDownload("png")}>
-              PNGダウンロード
-            </button>
-            <button type="button" onClick={() => handleDownload("jpg")}>
-              JPGダウンロード
-            </button>
-          </div>
-          {downloadError && <p className={styles.error}>{downloadError}</p>}
         </div>
       )}
     </section>

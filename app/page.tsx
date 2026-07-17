@@ -196,9 +196,9 @@ export default function Home() {
       characterStudio,
       thumbnail: {
         ...thumbnail,
-        concepts: thumbnail.concepts.map((concept) => ({
-          ...concept,
-          imageLoading: false,
+        images: thumbnail.images.map((image) => ({
+          ...image,
+          loading: false,
         })),
       },
       scenes: scenes.map((scene) => ({

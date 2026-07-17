@@ -219,78 +219,108 @@
   color: #fca5a5;
 }
 
-.conceptCard h4 {
-  margin: 0 0 0.9rem;
-  color: #f8fafc;
-  font-size: 1.1rem;
-}
-
-.conceptDetails {
-  display: grid;
-  gap: 0.65rem;
-  margin: 0;
-}
-
-.conceptDetails div {
-  display: grid;
-  gap: 0.15rem;
-}
-
-.conceptDetails dt {
-  color: #686f7b;
+.adoptedBadge {
+  padding: 0.2rem 0.55rem;
+  color: #fff;
+  background: #b91c1c;
+  border-radius: 999px;
   font-size: 0.68rem;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-.conceptDetails dd {
-  margin: 0;
-  color: #bcc2cc;
-  font-size: 0.78rem;
-  line-height: 1.55;
+  letter-spacing: 0.08em;
 }
 
 .backgroundButton {
   width: 100%;
-  margin-top: 1rem;
-  padding: 0.75rem;
+  padding: 0.7rem;
   color: #fff;
   background: #991b1b;
 }
 
+.cardActions {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.9rem;
+}
+
+.cardDownloadRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.cardDownloadRow button {
+  padding: 0.6rem 0.4rem;
+  color: #e5e7eb;
+  background: #1a1e27;
+  border: 1px solid #303541;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.cardDownloadRow button:hover {
+  border-color: #4b5261;
+}
+
+.adoptButton {
+  width: 100%;
+  padding: 0.7rem;
+  color: #fca5a5;
+  background: transparent;
+  border: 1px solid #7f1d1d;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.adoptButton:hover:not(:disabled) {
+  background: rgba(185, 28, 28, 0.18);
+}
+
+.adoptButtonActive,
+.adoptButton:disabled {
+  color: #fff;
+  background: #7f1d1d;
+  border-color: #dc2626;
+  cursor: default;
+}
+
+.cardLoading {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 16 / 9;
+  color: #6b7280;
+  background: #050609;
+  border-radius: 0.45rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
 .cardError {
-  margin-top: 0.75rem;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 0.4rem;
+  aspect-ratio: 16 / 9;
   padding: 0.7rem;
   color: #fca5a5;
   background: rgba(127, 29, 29, 0.18);
   border-radius: 0.5rem;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
+  text-align: center;
 }
 
 .cardError p {
-  margin: 0 0 0.5rem;
-}
-
-.cardError button {
-  padding: 0;
-  color: #fff;
-  background: transparent;
-  border: 0;
-  cursor: pointer;
+  margin: 0;
   font-weight: 700;
-  text-decoration: underline;
 }
 
-.cardImageButton {
-  display: block;
-  width: 100%;
-  margin: 0 0 0.9rem;
-  padding: 0;
-  overflow: hidden;
-  background: transparent;
-  border: 1px solid #343946;
-  border-radius: 0.45rem;
-  cursor: pointer;
+.cardErrorDetail {
+  color: #9a6a6a;
+  font-size: 0.7rem;
+  font-weight: 400;
+  overflow-wrap: anywhere;
 }
 
 .thumbnailCanvas {
@@ -327,8 +357,12 @@
   --translate-x: 0;
   --translate-y: 0;
   position: absolute;
-  z-index: 1;
-  max-width: 82%;
+  z-index: 2;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  max-width: 45%;
   color: var(--thumbnail-color);
   font-family: "Noto Sans JP", "Arial Black", sans-serif;
   font-size: var(--thumbnail-font-size);
