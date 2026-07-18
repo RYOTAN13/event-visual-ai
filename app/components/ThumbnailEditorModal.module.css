@@ -1,0 +1,220 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.72);
+}
+
+.modal {
+  width: min(1120px, 100%);
+  max-height: min(92vh, 920px);
+  overflow: auto;
+  border: 1px solid #303541;
+  border-radius: 1rem;
+  background: #0b0d12;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem 1.1rem 0.7rem;
+  border-bottom: 1px solid #1f2430;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.toolButton {
+  border: 1px solid #303541;
+  border-radius: 0.45rem;
+  background: #12151c;
+  color: #d1d5db;
+  padding: 0.4rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.toolButton:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.previewMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.45rem;
+  margin-top: 0.55rem;
+}
+
+.hint {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+.coords {
+  margin: 0;
+  color: #fbbf24;
+  font-size: 0.78rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.utilityRow {
+  display: grid;
+  gap: 0.55rem;
+  margin-bottom: 0.85rem;
+}
+
+.utilityButton {
+  border: 1px solid #374151;
+  border-radius: 0.5rem;
+  background: #151922;
+  color: #e5e7eb;
+  padding: 0.55rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.utilityButton:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.copyRow {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.45rem;
+  align-items: end;
+}
+
+.copyLabel {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.copyLabel span {
+  color: #9ca3af;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.copyLabel select {
+  width: 100%;
+  border: 1px solid #303541;
+  border-radius: 0.45rem;
+  background: #0b0d12;
+  color: #f3f4f6;
+  padding: 0.5rem 0.6rem;
+}
+
+.shortcuts {
+  margin: 0.75rem 0 0;
+  color: #6b7280;
+  font-size: 0.7rem;
+  line-height: 1.45;
+}
+
+.notice {
+  margin: 0 1.1rem;
+  color: #86efac;
+  font-size: 0.82rem;
+}
+
+.header span {
+  display: block;
+  color: #9ca3af;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  font-weight: 800;
+}
+
+.header h3 {
+  margin: 0.2rem 0 0;
+  color: #f9fafb;
+  font-size: 1.05rem;
+}
+
+.closeButton {
+  border: 0;
+  background: transparent;
+  color: #9ca3af;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+  gap: 1rem;
+  padding: 1rem 1.1rem;
+}
+
+.previewPane,
+.controlsPane {
+  min-width: 0;
+}
+
+.error {
+  margin: 0 1.1rem;
+  color: #fca5a5;
+  font-size: 0.82rem;
+}
+
+.footer {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+  padding: 0.9rem 1.1rem 1.1rem;
+  border-top: 1px solid #1f2430;
+}
+
+.primary,
+.secondary {
+  border-radius: 0.55rem;
+  padding: 0.7rem 0.6rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.primary {
+  border: 0;
+  background: #991b1b;
+  color: #fff;
+}
+
+.secondary {
+  border: 1px solid #303541;
+  background: #12151c;
+  color: #e5e7eb;
+}
+
+.secondary:disabled,
+.primary:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+@media (max-width: 900px) {
+  .body {
+    grid-template-columns: 1fr;
+  }
+
+  .footer {
+    grid-template-columns: 1fr;
+  }
+}

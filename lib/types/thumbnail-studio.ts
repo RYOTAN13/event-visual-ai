@@ -1,122 +1,102 @@
-export const THUMBNAIL_MOODS = [
-  "冤罪",
-  "恐怖",
-  "未解決",
-  "怒り",
-  "悲劇",
-  "衝撃",
-  "法廷",
-  "捜査",
-  "真相",
-] as const;
+import {
+  createDefaultTextSettings,
+  normalizeTextSettings,
+  type ThumbnailTextSettings,
+} from "@/lib/thumbnail-studio/text-settings";
 
-export type ThumbnailMood = (typeof THUMBNAIL_MOODS)[number];
-export type ThumbnailHorizontalAlign = "left" | "center" | "right";
-export type ThumbnailVerticalAlign = "top" | "center" | "bottom";
+export type ThumbnailVariationId =
+  | "A"
+  | "B"
+  | "C"
+  | "D"
+  | "E"
+  | "F"
+  | "G"
+  | "H";
 
-export const THUMBNAIL_VARIATION_IDS = ["A", "B", "C", "D"] as const;
-export type ThumbnailVariationId = (typeof THUMBNAIL_VARIATION_IDS)[number];
-
-export const THUMBNAIL_VARIATION_LABELS: Record<ThumbnailVariationId, string> =
-  {
-    A: "A 王道",
-    B: "B ドキュメンタリー",
-    C: "C 捜査・衝撃",
-    D: "D ミステリー",
-  };
-
-export type ThumbnailTextStyle = {
-  fontSize: number;
-  color: string;
-  outlineColor: string;
-  outlineWidth: number;
-  shadow: boolean;
-  horizontalAlign: ThumbnailHorizontalAlign;
-  verticalAlign: ThumbnailVerticalAlign;
-};
+export const THUMBNAIL_VARIATION_IDS = [
+  "A",
+  "B",
+  "C",
+  "D",
+  "E",
+  "F",
+  "G",
+  "H",
+] as const satisfies readonly ThumbnailVariationId[];
 
 export type ThumbnailImage = {
   variation: ThumbnailVariationId;
   imageUrl: string | null;
   loading: boolean;
   error: string | null;
+  textSettings: ThumbnailTextSettings;
 };
 
 export type ThumbnailStudioState = {
   caseName: string;
-  videoTitle: string;
   thumbnailText: string;
-  person: string;
-  background: string;
-  additionalInstruction: string;
-  moods: ThumbnailMood[];
   images: ThumbnailImage[];
   adoptedVariation: ThumbnailVariationId | null;
-  textStyle: ThumbnailTextStyle;
 };
 
-export const DEFAULT_THUMBNAIL_TEXT_STYLE: ThumbnailTextStyle = {
-  fontSize: 96,
-  color: "#ffffff",
-  outlineColor: "#000000",
-  outlineWidth: 10,
-  shadow: true,
-  horizontalAlign: "left",
-  verticalAlign: "bottom",
-};
-
-export function createEmptyThumbnailImages(): ThumbnailImage[] {
+export function createEmptyThumbnailImages(
+  fallbackText = ""
+): ThumbnailImage[] {
   return THUMBNAIL_VARIATION_IDS.map((variation) => ({
     variation,
     imageUrl: null,
     loading: false,
     error: null,
+    textSettings: createDefaultTextSettings(fallbackText),
   }));
 }
 
 export const DEFAULT_THUMBNAIL_STUDIO: ThumbnailStudioState = {
   caseName: "",
-  videoTitle: "",
   thumbnailText: "",
-  person: "",
-  background: "",
-  additionalInstruction: "",
-  moods: [],
   images: createEmptyThumbnailImages(),
   adoptedVariation: null,
-  textStyle: DEFAULT_THUMBNAIL_TEXT_STYLE,
 };
 
 export function normalizeThumbnailStudio(
-  value: Partial<ThumbnailStudioState> | null | undefined
+  value: Partial<ThumbnailStudioState> & {
+    textStyle?: unknown;
+  } | null | undefined
 ): ThumbnailStudioState {
   const savedImages = Array.isArray(value?.images) ? value.images : [];
+  const fallbackText =
+    typeof value?.thumbnailText === "string" ? value.thumbnailText : "";
+  const legacyStyle = value?.textStyle;
+
   const images = THUMBNAIL_VARIATION_IDS.map((variation) => {
-    const saved = savedImages.find((item) => item?.variation === variation);
+    const saved = savedImages.find(
+      (item) =>
+        item &&
+        typeof item === "object" &&
+        (item as ThumbnailImage).variation === variation
+    ) as
+      | (Partial<ThumbnailImage> & { textSettings?: unknown })
+      | undefined;
+
     return {
       variation,
-      imageUrl: saved?.imageUrl ?? null,
+      imageUrl:
+        typeof saved?.imageUrl === "string" || saved?.imageUrl === null
+          ? saved.imageUrl
+          : null,
       loading: false,
       error: null,
+      textSettings: normalizeTextSettings(
+        saved?.textSettings ?? legacyStyle,
+        fallbackText
+      ),
     };
   });
 
   return {
     caseName: typeof value?.caseName === "string" ? value.caseName : "",
-    videoTitle: typeof value?.videoTitle === "string" ? value.videoTitle : "",
-    thumbnailText:
-      typeof value?.thumbnailText === "string" ? value.thumbnailText : "",
-    person: typeof value?.person === "string" ? value.person : "",
-    background: typeof value?.background === "string" ? value.background : "",
-    additionalInstruction:
-      typeof value?.additionalInstruction === "string"
-        ? value.additionalInstruction
-        : "",
-    moods: Array.isArray(value?.moods)
-      ? value.moods.filter((mood): mood is ThumbnailMood =>
-          (THUMBNAIL_MOODS as readonly string[]).includes(mood as string)
-        )
-      : [],
+    thumbnailText: fallbackText,
     images,
     adoptedVariation:
       value?.adoptedVariation &&
@@ -127,9 +107,5 @@ export function normalizeThumbnailStudio(
       )
         ? value.adoptedVariation
         : null,
-    textStyle: {
-      ...DEFAULT_THUMBNAIL_TEXT_STYLE,
-      ...value?.textStyle,
-    },
   };
 }

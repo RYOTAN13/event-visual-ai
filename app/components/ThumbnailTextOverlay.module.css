@@ -1,0 +1,120 @@
+.canvas {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  container-type: inline-size;
+  aspect-ratio: 16 / 9;
+  background: #050609;
+  user-select: none;
+  touch-action: none;
+}
+
+.image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.placeholder {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: #4b5563;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.guides {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.guideV,
+.guideH {
+  position: absolute;
+  background: rgba(248, 113, 113, 0.35);
+}
+
+.guideV {
+  top: 0;
+  bottom: 0;
+  width: 1px;
+}
+
+.guideH {
+  left: 0;
+  right: 0;
+  height: 1px;
+}
+
+.guideEdge {
+  left: 0;
+  top: 0;
+}
+
+.guideEdgeRight {
+  right: 0;
+  left: auto;
+}
+
+.guideEdgeBottom {
+  bottom: 0;
+  top: auto;
+}
+
+.guideCenter.guideV {
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(96, 165, 250, 0.55);
+}
+
+.guideCenter.guideH {
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(96, 165, 250, 0.55);
+}
+
+.guideActive {
+  background: rgba(250, 204, 21, 0.95) !important;
+  box-shadow: 0 0 0 1px rgba(250, 204, 21, 0.35);
+}
+
+.textLayer {
+  position: absolute;
+  left: var(--thumb-x);
+  top: var(--thumb-y);
+  max-width: var(--thumb-max-width);
+  text-align: var(--thumb-align);
+  z-index: 3;
+  will-change: left, top;
+}
+
+.draggable {
+  cursor: grab;
+}
+
+.dragging,
+.draggable:active {
+  cursor: grabbing;
+}
+
+.text {
+  display: inline-block;
+  max-width: 100%;
+  color: var(--thumb-color);
+  font-family: var(--thumb-font-family);
+  font-size: var(--thumb-font-size);
+  font-weight: var(--thumb-font-weight);
+  line-height: var(--thumb-line-height);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  -webkit-text-stroke: var(--thumb-stroke-width) var(--thumb-stroke);
+  paint-order: stroke fill;
+  text-shadow: var(--thumb-shadow);
+}

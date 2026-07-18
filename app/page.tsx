@@ -1484,7 +1484,6 @@ export default function Home() {
               setThumbnail((current) => ({
                 ...current,
                 caseName: current.caseName || eventName,
-                videoTitle: current.videoTitle || scriptTitle || eventName,
               }));
               setActiveTab("thumbnail");
             }}

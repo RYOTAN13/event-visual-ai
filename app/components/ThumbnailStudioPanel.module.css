@@ -1,32 +1,17 @@
 .studio {
   display: grid;
-  gap: 1.5rem;
+  gap: 1.25rem;
 }
 
-.formPanel,
-.editor {
-  background:
-    linear-gradient(145deg, rgba(35, 10, 15, 0.45), transparent 45%),
-    #101218;
+.quickStart {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 180px;
+  gap: 0.75rem;
+  align-items: end;
+  padding: 1rem;
+  background: #101218;
   border: 1px solid #2b2f39;
   border-radius: 0.875rem;
-}
-
-.generateBar {
-  display: grid;
-  gap: 0.5rem;
-}
-
-.formPanel,
-.editor {
-  padding: 1.5rem;
-}
-
-.fieldGrid,
-.textControls {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
 }
 
 .field {
@@ -45,7 +30,6 @@
 }
 
 .field input,
-.field textarea,
 .field select {
   width: 100%;
   box-sizing: border-box;
@@ -59,67 +43,14 @@
 }
 
 .field input:focus,
-.field textarea:focus,
 .field select:focus {
   border-color: #b91c1c;
   box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.16);
 }
 
-.field textarea {
-  resize: vertical;
-}
-
-.field small {
-  color: #646b77;
-  font-size: 0.7rem;
-  line-height: 1.5;
-}
-
-.moodField {
-  margin: 1.25rem 0;
-  padding: 0;
-  border: 0;
-}
-
-.moodField legend {
-  margin-bottom: 0.65rem;
-  color: #9ca3af;
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-
-.moodGrid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.moodChip {
-  padding: 0.5rem 0.8rem;
-  color: #aeb4bf;
-  background: #0b0d12;
-  border: 1px solid #303541;
-  border-radius: 999px;
-  cursor: pointer;
-  font-size: 0.78rem;
-  transition: 0.15s ease;
-}
-
-.moodChip input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.moodChipActive {
-  color: #fff;
-  background: rgba(185, 28, 28, 0.28);
-  border-color: #dc2626;
-}
-
 .conceptButton,
 .backgroundButton,
-.downloadActions button {
+.downloadButton {
   border: 0;
   border-radius: 0.5rem;
   cursor: pointer;
@@ -128,8 +59,8 @@
 }
 
 .conceptButton {
-  width: 100%;
-  padding: 0.9rem;
+  min-height: 2.8rem;
+  padding: 0.75rem;
   color: #fff;
   background: linear-gradient(135deg, #b91c1c, #7f1d1d);
   font-size: 1rem;
@@ -143,7 +74,7 @@
 
 .conceptButton:hover:not(:disabled),
 .backgroundButton:hover:not(:disabled),
-.downloadActions button:hover {
+.downloadButton:hover {
   opacity: 0.88;
 }
 
@@ -157,20 +88,36 @@
   font-size: 0.8rem;
 }
 
-.previewSection > h3 {
-  margin: 0 0 0.9rem;
+.progressPanel {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.9rem 1rem;
   color: #e5e7eb;
-  font-size: 1rem;
+  background: #101218;
+  border: 1px solid #2b2f39;
+  border-radius: 0.75rem;
 }
 
-.conceptGrid {
+.progressHeader {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+}
+
+.progressPanel progress {
+  width: 100%;
+  height: 0.55rem;
+  accent-color: #dc2626;
+}
+
+.thumbnailGrid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
 }
 
 .conceptCard {
-  padding: 1rem;
+  overflow: hidden;
   background: #101218;
   border: 1px solid #2b2f39;
   border-radius: 0.75rem;
@@ -182,72 +129,28 @@
   box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.2);
 }
 
-.conceptHeader {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 0.75rem;
-  color: #ef4444;
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.09em;
-}
-
-.conceptHeader b {
-  color: #fca5a5;
-}
-
-.adoptedBadge {
-  padding: 0.2rem 0.55rem;
-  color: #fff;
-  background: #b91c1c;
-  border-radius: 999px;
-  font-size: 0.68rem;
-  letter-spacing: 0.08em;
-}
-
 .backgroundButton {
-  width: 100%;
-  padding: 0.7rem;
+  padding: 0.55rem 0.3rem;
   color: #fff;
   background: #991b1b;
 }
 
 .cardActions {
   display: grid;
-  gap: 0.5rem;
-  margin-top: 0.9rem;
-}
-
-.cardDownloadRow {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.5rem;
-}
-
-.cardDownloadRow button {
-  padding: 0.6rem 0.4rem;
-  color: #e5e7eb;
-  background: #1a1e27;
-  border: 1px solid #303541;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-
-.cardDownloadRow button:hover {
-  border-color: #4b5261;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.35rem;
+  padding: 0.55rem;
 }
 
 .adoptButton {
-  width: 100%;
-  padding: 0.7rem;
+  padding: 0.55rem 0.3rem;
   color: #fca5a5;
   background: transparent;
   border: 1px solid #7f1d1d;
   border-radius: 0.5rem;
   cursor: pointer;
   font-weight: 800;
+  font-size: 0.72rem;
 }
 
 .adoptButton:hover:not(:disabled) {
@@ -268,7 +171,6 @@
   aspect-ratio: 16 / 9;
   color: #6b7280;
   background: #050609;
-  border-radius: 0.45rem;
   font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -283,7 +185,6 @@
   padding: 0.7rem;
   color: #fca5a5;
   background: rgba(127, 29, 29, 0.18);
-  border-radius: 0.5rem;
   font-size: 0.8rem;
   text-align: center;
 }
@@ -298,6 +199,43 @@
   font-size: 0.7rem;
   font-weight: 400;
   overflow-wrap: anywhere;
+}
+
+.imageButton {
+  display: block;
+  width: 100%;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  cursor: zoom-in;
+}
+
+.cardPreview {
+  display: block;
+  width: 100%;
+}
+
+.editButton {
+  padding: 0.55rem 0.3rem;
+  color: #e5e7eb;
+  background: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-weight: 800;
+  font-size: 0.68rem;
+}
+
+.editButton:hover {
+  background: #273244;
+}
+
+.downloadButton {
+  padding: 0.55rem 0.3rem;
+  color: #e5e7eb;
+  background: #1a1e27;
+  border: 1px solid #303541;
+  font-size: 0.68rem;
 }
 
 .thumbnailCanvas {
@@ -337,7 +275,7 @@
   -webkit-line-clamp: 3;
   max-width: 45%;
   color: var(--thumbnail-color);
-  font-family: "Noto Sans JP", "Arial Black", sans-serif;
+  font-family: var(--thumbnail-font-family);
   font-size: var(--thumbnail-font-size);
   font-weight: 900;
   line-height: 1.06;
@@ -381,7 +319,32 @@
   bottom: 7%;
 }
 
+.modalBackdrop {
+  position: fixed;
+  z-index: 200;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(2, 3, 6, 0.86);
+  backdrop-filter: blur(8px);
+}
+
+.editorModal {
+  width: min(960px, 96vw);
+  max-height: 94vh;
+  overflow-y: auto;
+  padding: 1.25rem;
+  background: #101218;
+  border: 1px solid #343946;
+  border-radius: 0.875rem;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.65);
+}
+
 .editorHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 1rem;
 }
 
@@ -397,14 +360,61 @@
   color: #f8fafc;
 }
 
+.closeButton {
+  width: 2.5rem;
+  height: 2.5rem;
+  color: #d1d5db;
+  background: #1b1f29;
+  border: 1px solid #343946;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1.4rem;
+}
+
 .largePreview {
+  position: relative;
   overflow: hidden;
   margin-bottom: 1.25rem;
   border: 1px solid #343946;
   border-radius: 0.65rem;
 }
 
+.editLoading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.65);
+  font-weight: 800;
+}
+
+.partialActions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.partialActions button {
+  padding: 0.75rem;
+  color: #fff;
+  background: #7f1d1d;
+  border: 1px solid #b91c1c;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.partialActions button:disabled {
+  cursor: wait;
+  opacity: 0.5;
+}
+
 .textControls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
   align-items: end;
 }
 
@@ -473,54 +483,26 @@
   border-color: #dc2626;
 }
 
-.previewSection {
-  margin-top: 1.5rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid #2b2f39;
-}
+@media (max-width: 1050px) {
+  .thumbnailGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 
-.previewGrid {
-  display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(180px, 1fr);
-  gap: 1rem;
-  align-items: start;
-}
-
-.previewGrid > div {
-  display: grid;
-  gap: 0.45rem;
-}
-
-.previewGrid > div > span {
-  color: #747b87;
-  font-size: 0.7rem;
-  font-weight: 700;
-}
-
-.downloadActions {
-  display: flex;
-  gap: 0.75rem;
-  margin-top: 1.25rem;
-}
-
-.downloadActions button {
-  flex: 1;
-  padding: 0.8rem;
-  color: #fff;
-  background: linear-gradient(135deg, #991b1b, #450a0a);
+  .cardActions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 700px) {
-  .fieldGrid,
-  .conceptGrid,
+  .quickStart,
+  .thumbnailGrid,
   .textControls,
   .positionControls,
-  .previewGrid {
+  .partialActions {
     grid-template-columns: 1fr;
   }
 
-  .formPanel,
-  .editor {
+  .editorModal {
     padding: 1rem;
   }
 }
