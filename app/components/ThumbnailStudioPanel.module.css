@@ -3,7 +3,6 @@
   gap: 1.5rem;
 }
 
-.hero,
 .formPanel,
 .editor {
   background:
@@ -13,30 +12,9 @@
   border-radius: 0.875rem;
 }
 
-.hero {
-  padding: 1.75rem;
-  border-color: rgba(185, 28, 28, 0.35);
-}
-
-.version {
-  display: block;
-  margin-bottom: 0.5rem;
-  color: #ef4444;
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-}
-
-.hero h2 {
-  margin: 0 0 0.5rem;
-  color: #f8fafc;
-  font-size: 1.75rem;
-}
-
-.hero p {
-  margin: 0;
-  color: #9299a6;
-  line-height: 1.7;
+.generateBar {
+  display: grid;
+  gap: 0.5rem;
 }
 
 .formPanel,
@@ -151,10 +129,10 @@
 
 .conceptButton {
   width: 100%;
-  margin-top: 1.25rem;
   padding: 0.9rem;
   color: #fff;
   background: linear-gradient(135deg, #b91c1c, #7f1d1d);
+  font-size: 1rem;
 }
 
 .conceptButton:disabled,
@@ -179,7 +157,6 @@
   font-size: 0.8rem;
 }
 
-.concepts > h3,
 .previewSection > h3 {
   margin: 0 0 0.9rem;
   color: #e5e7eb;
@@ -330,10 +307,6 @@
   container-type: inline-size;
   aspect-ratio: 16 / 9;
   background: #050609;
-}
-
-.thumbnailCanvasCompact {
-  max-width: 360px;
 }
 
 .thumbnailImage {

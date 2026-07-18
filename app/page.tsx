@@ -283,7 +283,7 @@ export default function Home() {
     if (scene.visualDirectorPrompt?.trim()) {
       return {
         prompt: scene.visualDirectorPrompt.trim(),
-        warning: scene.visualDirectorWarning,
+        warning: null,
         error: null,
       };
     }
@@ -357,7 +357,7 @@ export default function Home() {
 
       return {
         prompt: fallbackPrompt,
-        warning: scene.visualDirectorWarning,
+        warning: null,
         error: null,
       };
     }
@@ -1036,12 +1036,6 @@ export default function Home() {
         finalImagePrompt: null,
         imageGenerationSeconds: null,
       };
-    }
-
-    if (resolved.warning && resolved.warning !== scene.visualDirectorWarning) {
-      updateScene(scene.sceneNumber, {
-        visualDirectorWarning: resolved.warning,
-      });
     }
 
     const startMs = performance.now();
@@ -1867,12 +1861,6 @@ export default function Home() {
                       >
                         元に戻す
                       </button>
-                    )}
-
-                    {scene.visualDirectorWarning && (
-                      <p className={styles.promptWarning}>
-                        {scene.visualDirectorWarning}
-                      </p>
                     )}
 
                     <div className={styles.sceneImageWrap}>

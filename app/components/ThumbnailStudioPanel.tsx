@@ -31,11 +31,9 @@ type Props = {
 function ThumbnailCanvas({
   imageUrl,
   state,
-  compact = false,
 }: {
   imageUrl: string | null;
   state: ThumbnailStudioState;
-  compact?: boolean;
 }) {
   const textStyle = {
     "--thumbnail-color": state.textStyle.color,
@@ -48,12 +46,7 @@ function ThumbnailCanvas({
   } as CSSProperties;
 
   return (
-    <div
-      className={`${styles.thumbnailCanvas} ${
-        compact ? styles.thumbnailCanvasCompact : ""
-      }`}
-      style={textStyle}
-    >
+    <div className={styles.thumbnailCanvas} style={textStyle}>
       {imageUrl ? (
         <img
           className={styles.thumbnailImage}
@@ -204,13 +197,94 @@ export function ThumbnailStudioPanel({
 
   return (
     <section className={styles.studio}>
-      <div className={styles.hero}>
-        <span className={styles.version}>VER 2.3 · DIRECT 4-UP</span>
-        <h2>Thumbnail Studio</h2>
-        <p>
-          事件系YouTube動画専用。入力からワンクリックで4方向のサムネイルを生成します。
-        </p>
+      <div className={styles.generateBar}>
+        <button
+          type="button"
+          className={styles.conceptButton}
+          onClick={handleGenerateAll}
+          disabled={isGenerating}
+        >
+          {isGenerating ? "4枚を生成中..." : "サムネイルを4枚生成"}
+        </button>
+        {formError && <p className={styles.error}>{formError}</p>}
       </div>
+
+      <div className={styles.conceptGrid}>
+        {value.images.map((image) => {
+          const isAdopted =
+            value.adoptedVariation === image.variation &&
+            Boolean(image.imageUrl);
+          return (
+            <article
+              key={image.variation}
+              className={`${styles.conceptCard} ${
+                isAdopted ? styles.conceptCardSelected : ""
+              }`}
+            >
+              <div className={styles.conceptHeader}>
+                <span>{THUMBNAIL_VARIATION_LABELS[image.variation]}</span>
+                {isAdopted && <b className={styles.adoptedBadge}>採用中</b>}
+              </div>
+
+              {image.loading ? (
+                <div className={styles.cardLoading}>生成中...</div>
+              ) : image.imageUrl ? (
+                <ThumbnailCanvas imageUrl={image.imageUrl} state={value} />
+              ) : image.error ? (
+                <div className={styles.cardError}>
+                  <p>画像生成に失敗しました</p>
+                  <p className={styles.cardErrorDetail}>{image.error}</p>
+                </div>
+              ) : (
+                <div className={styles.cardLoading}>16:9</div>
+              )}
+
+              {!image.loading && (image.imageUrl || image.error) && (
+                <div className={styles.cardActions}>
+                  {image.imageUrl && (
+                    <button
+                      type="button"
+                      className={`${styles.adoptButton} ${
+                        isAdopted ? styles.adoptButtonActive : ""
+                      }`}
+                      onClick={() =>
+                        updateState({ adoptedVariation: image.variation })
+                      }
+                      disabled={isAdopted}
+                    >
+                      {isAdopted ? "採用中" : "採用"}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className={styles.backgroundButton}
+                    onClick={() => generateVariation(image.variation)}
+                  >
+                    再生成
+                  </button>
+                  {image.imageUrl && (
+                    <div className={styles.cardDownloadRow}>
+                      <button
+                        type="button"
+                        onClick={() => handleDownload(image, "png")}
+                      >
+                        PNGダウンロード
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDownload(image, "jpg")}
+                      >
+                        JPGダウンロード
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </article>
+          );
+        })}
+      </div>
+      {downloadError && <p className={styles.error}>{downloadError}</p>}
 
       <div className={styles.formPanel}>
         <div className={styles.fieldGrid}>
@@ -300,101 +374,7 @@ export function ThumbnailStudioPanel({
           />
         </label>
 
-        <button
-          type="button"
-          className={styles.conceptButton}
-          onClick={handleGenerateAll}
-          disabled={isGenerating}
-        >
-          {isGenerating ? "4枚を生成中..." : "サムネイルを4枚生成"}
-        </button>
-        {formError && <p className={styles.error}>{formError}</p>}
       </div>
-
-      {(hasAnyImage || isGenerating) && (
-        <div className={styles.concepts}>
-          <h3>生成サムネイル</h3>
-          <div className={styles.conceptGrid}>
-            {value.images.map((image) => {
-              const isAdopted =
-                value.adoptedVariation === image.variation &&
-                Boolean(image.imageUrl);
-              return (
-                <article
-                  key={image.variation}
-                  className={`${styles.conceptCard} ${
-                    isAdopted ? styles.conceptCardSelected : ""
-                  }`}
-                >
-                  <div className={styles.conceptHeader}>
-                    <span>
-                      {THUMBNAIL_VARIATION_LABELS[image.variation]}
-                    </span>
-                    {isAdopted && <b className={styles.adoptedBadge}>採用中</b>}
-                  </div>
-
-                  {image.loading ? (
-                    <div className={styles.cardLoading}>生成中...</div>
-                  ) : image.imageUrl ? (
-                    <ThumbnailCanvas imageUrl={image.imageUrl} state={value} />
-                  ) : image.error ? (
-                    <div className={styles.cardError}>
-                      <p>画像生成に失敗しました</p>
-                      <p className={styles.cardErrorDetail}>{image.error}</p>
-                    </div>
-                  ) : (
-                    <div className={styles.cardLoading}>未生成</div>
-                  )}
-
-                  <div className={styles.cardActions}>
-                    <button
-                      type="button"
-                      className={styles.backgroundButton}
-                      onClick={() => generateVariation(image.variation)}
-                      disabled={image.loading}
-                    >
-                      この画像だけ再生成
-                    </button>
-                    {image.imageUrl && !image.loading && (
-                      <>
-                        <div className={styles.cardDownloadRow}>
-                          <button
-                            type="button"
-                            onClick={() => handleDownload(image, "png")}
-                          >
-                            PNGダウンロード
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDownload(image, "jpg")}
-                          >
-                            JPGダウンロード
-                          </button>
-                        </div>
-                        <button
-                          type="button"
-                          className={`${styles.adoptButton} ${
-                            isAdopted ? styles.adoptButtonActive : ""
-                          }`}
-                          onClick={() =>
-                            updateState({
-                              adoptedVariation: image.variation,
-                            })
-                          }
-                          disabled={isAdopted}
-                        >
-                          {isAdopted ? "採用中" : "採用"}
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-          {downloadError && <p className={styles.error}>{downloadError}</p>}
-        </div>
-      )}
 
       {hasAnyImage && (
         <div className={styles.editor}>

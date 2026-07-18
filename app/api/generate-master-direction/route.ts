@@ -12,7 +12,7 @@ import {
   isVisualDirectorScenePromptEmpty,
   isShortVisualDirectorScenePrompt,
   strengthenVisualDirectorScenePrompt,
-  getShortPromptWarning,
+  logShortPromptAutoStrengthen,
 } from "@/lib/visual-director";
 import type { Scene } from "@/lib/types";
 
@@ -209,8 +209,6 @@ export async function POST(request: Request) {
       typedScenes.map((scene) => [scene.sceneNumber, scene])
     );
 
-    const warnings: string[] = [];
-
     const results = data.scenes.map((scene) => {
       const inputScene = sceneMap.get(scene.sceneNumber);
       const charactersInScene = inputScene?.charactersInScene ?? [
@@ -247,9 +245,7 @@ export async function POST(request: Request) {
         : rawScenePrompt;
 
       if (isShortVisualDirectorScenePrompt(rawScenePrompt)) {
-        warnings.push(
-          getShortPromptWarning(scene.sceneNumber, rawScenePrompt.length)
-        );
+        logShortPromptAutoStrengthen(scene.sceneNumber, rawScenePrompt.length);
       }
 
       const visualDirectorPrompt = buildSceneImagePrompt(
@@ -275,7 +271,7 @@ export async function POST(request: Request) {
       masterDirectorPrompt,
       characterBiblePrompt,
       scenes: results,
-      warnings,
+      warnings: [],
     });
   } catch (error) {
     const message =

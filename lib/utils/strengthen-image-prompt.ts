@@ -25,6 +25,16 @@ export function getShortPromptWarning(
   return `${sceneNumber} のVisual Director Promptが${MIN_VISUAL_DIRECTOR_PROMPT_LENGTH}文字未満です（${length}文字）。自動補強して画像生成を続行します。`;
 }
 
+/** 内部処理ログのみ。ユーザー向けUIには表示しない。 */
+export function logShortPromptAutoStrengthen(
+  sceneNumber: string,
+  length: number
+): void {
+  console.info(
+    `[visual-director] ${getShortPromptWarning(sceneNumber, length)}`
+  );
+}
+
 export type StrengthenSceneInput = {
   sceneNumber: string;
   visualDirectorScenePrompt: string;
@@ -141,9 +151,10 @@ export function buildStrengthenedImagePrompt(
     .filter(Boolean)
     .join("\n");
 
-  const warning = isShortVisualDirectorScenePrompt(rawScenePrompt)
-    ? getShortPromptWarning(input.sceneNumber, rawScenePrompt.length)
-    : null;
+  const warning = null;
+  if (isShortVisualDirectorScenePrompt(rawScenePrompt)) {
+    logShortPromptAutoStrengthen(input.sceneNumber, rawScenePrompt.length);
+  }
 
   const prompt = buildSceneImagePrompt(
     input.masterDirectorPrompt ?? "",

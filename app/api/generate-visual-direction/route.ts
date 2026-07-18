@@ -8,7 +8,7 @@ import {
   VISUAL_DIRECTOR_AI_SYSTEM_PROMPT,
   isVisualDirectorScenePromptEmpty,
   isShortVisualDirectorScenePrompt,
-  getShortPromptWarning,
+  logShortPromptAutoStrengthen,
   validateUniqueFraming,
   type SceneDirectionMeta,
 } from "@/lib/visual-director";
@@ -193,8 +193,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: framingError }, { status: 502 });
     }
 
-    const warnings: string[] = [];
-
     const results = data.scenes.map((scene) => {
       const scenePrompt = scene.visualDirectorPrompt.trim();
       if (isVisualDirectorScenePromptEmpty(scenePrompt)) {
@@ -203,9 +201,7 @@ export async function POST(request: Request) {
         );
       }
       if (isShortVisualDirectorScenePrompt(scenePrompt)) {
-        warnings.push(
-          getShortPromptWarning(scene.sceneNumber, scenePrompt.length)
-        );
+        logShortPromptAutoStrengthen(scene.sceneNumber, scenePrompt.length);
       }
 
       return {
@@ -225,7 +221,7 @@ export async function POST(request: Request) {
       characterBible,
       characterBiblePrompt,
       scenes: results,
-      warnings,
+      warnings: [],
     });
   } catch (error) {
     const message =

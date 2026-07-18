@@ -14,6 +14,7 @@ export {
   getShortPromptWarning,
   isShortVisualDirectorScenePrompt,
   isVisualDirectorScenePromptEmpty,
+  logShortPromptAutoStrengthen,
   sceneHasImagePromptSource,
   strengthenVisualDirectorScenePrompt,
 } from "@/lib/utils/strengthen-image-prompt";
